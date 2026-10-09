@@ -4,7 +4,7 @@ use c43_layout::{layout, Hints, InputGraph};
 use serde_json::json;
 
 fn case(name: &str, f: &str) -> String {
-    std::fs::read_to_string(format!("{}/../c43-layout/tests/cases/{name}/{f}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    std::fs::read_to_string(format!("{}/fixtures/layout-cases/{name}/{f}", env!("CARGO_MANIFEST_DIR"))).unwrap()
 }
 
 fn draw(g: &InputGraph, h: &Hints) -> String {

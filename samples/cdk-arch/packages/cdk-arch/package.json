@@ -1,0 +1,40 @@
+{
+  "name": "@arinoto/cdk-arch",
+  "version": "0.7.3",
+  "description": "CDK Architecture primitives for event-driven solution architectures",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dooreelko/cdk-arch.git",
+    "directory": "packages/cdk-arch"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublish": "cp ../../IDEA.md ./README.md",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "cdk",
+    "architecture",
+    "cdktf"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "constructs": "^10.4.5"
+  }
+}

@@ -4,7 +4,7 @@ fn c43(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_c43")).args(args).output().unwrap()
 }
 
-const EXAMPLE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../example");
+const EXAMPLE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/samples/cdk-arch/packages/example");
 
 #[test]
 fn container_drawio_on_example() {
@@ -26,7 +26,7 @@ fn system_drawio_on_example() {
 
 #[test]
 fn empty_system_still_draws_and_warns() {
-    let out = c43(&["--drawio", "container", concat!(env!("CARGO_MANIFEST_DIR"), "/../example/local-docker")]);
+    let out = c43(&["--drawio", "container", concat!(env!("CARGO_MANIFEST_DIR"), "/samples/cdk-arch/packages/example/local-docker")]);
     assert!(out.status.success());
     assert!(String::from_utf8(out.stdout).unwrap().starts_with("<mxfile"));
     assert!(String::from_utf8(out.stderr).unwrap().contains("warning: nothing to lay out"));

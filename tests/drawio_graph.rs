@@ -15,7 +15,7 @@ fn rebob_container_dump_builds_the_router_case() {
     // the router case also made every backend a group; here only what contains something is a group,
     // so the empty backend sub-bob is a plain node
     let b = rebob();
-    let mut want: InputGraph = serde_json::from_str(&read("../c43-layout/tests/cases/rebob-container/graph.json")).unwrap();
+    let mut want: InputGraph = serde_json::from_str(&read("fixtures/layout-cases/rebob-container/graph.json")).unwrap();
     want.groups.retain(|g| g.id != "backend:sub-bob");
     assert_eq!(serde_json::to_value(&b.graph.groups).unwrap(), serde_json::to_value(&want.groups).unwrap());
     assert_eq!(serde_json::to_value(&b.graph.edges).unwrap(), serde_json::to_value(&want.edges).unwrap());
@@ -41,7 +41,7 @@ fn system_view_backends_are_nodes() {
 #[test]
 fn hints_match_ts_text_sizes() {
     let b = rebob();
-    let mut want: Hints = serde_json::from_str(&read("../c43-layout/tests/cases/rebob-container/hints.json")).unwrap();
+    let mut want: Hints = serde_json::from_str(&read("fixtures/layout-cases/rebob-container/hints.json")).unwrap();
     want.sizes.group_title.shift_remove("backend:sub-bob");
     let mut got = b.hints.sizes.clone();
     assert!(got.node.shift_remove("backend:sub-bob").is_some());

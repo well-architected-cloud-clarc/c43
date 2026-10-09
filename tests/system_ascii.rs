@@ -5,10 +5,8 @@ use c43::ascii;
 
 #[test]
 fn test_system_ascii_render() {
-    // Use the current project root for testing
-    let mut repo_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    repo_path.pop(); // packages/
-    repo_path.pop(); // root
+    // a copy of the cdk-arch workspace (cdk-arch + example) lives under samples/ (the path must not contain test-ish words, see is_test_pattern)
+    let repo_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("samples/cdk-arch");
     
     // Run the system extraction
     let doc = system::run(&repo_path);

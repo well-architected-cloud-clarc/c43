@@ -1,0 +1,30 @@
+{
+  "name": "cloudflare",
+  "version": "0.1.0",
+  "description": "Cloudflare Workers deployment for hello-world architecture",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "build:workers": "npm run build && node scripts/bundle-workers.js",
+    "deploy": "npm run build:workers && CLOUDFLARE_API_TOKEN=$(npx --yes wrangler auth token --json | jq -r .token) cdktf deploy --auto-approve",
+    "destroy": "CLOUDFLARE_API_TOKEN=$(npx --yes wrangler auth token --json | jq -r .token) cdktf destroy --auto-approve",
+    "e2e": "./e2e.sh",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@cdktf/provider-cloudflare": "^13.9.1",
+    "@cdktf/provider-null": "^10.0.0",
+    "@chialab/esbuild-plugin-commonjs": "^0.19.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "cdktf": "^0.21.0",
+    "cdktf-cli": "^0.21.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "architecture": "*",
+    "@arinoto/cdk-arch": "*",
+    "constructs": "^10.4.5"
+  }
+}

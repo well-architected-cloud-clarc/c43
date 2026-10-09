@@ -1,0 +1,75 @@
+#!/bin/bash
+set -exuo pipefail
+
+cd "$(dirname "$0")"
+
+if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  echo "Error: CLOUDFLARE_ACCOUNT_ID environment variable is required"
+  exit 1
+fi
+
+if [ -z "${CLOUDFLARE_SUBDOMAIN:-}" ]; then
+  echo "Error: CLOUDFLARE_SUBDOMAIN environment variable is required"
+  exit 1
+fi
+
+API_BASE_URL="https://hello-world-api.${CLOUDFLARE_SUBDOMAIN}.workers.dev"
+
+cleanup() {
+  echo "Cleaning up..."
+
+  LOGFILE=$(mktemp)
+  npm run destroy > "$LOGFILE" 2>&1 || ( echo "Error destroying" && tail "$LOGFILE" && echo "See full log in $LOGFILE")
+}
+
+fail() {
+  cleanup
+  exit 1
+}
+
+echo "=== Cloudflare E2E Test ==="
+
+echo "Deploying..."
+(cd ../.. && npm run clean && npm run build)
+npm run deploy 
+
+echo "Waiting for workers to be available..."
+sleep 10
+
+echo "Testing hello API..."
+RESPONSE=$(curl -s "${API_BASE_URL}/v1/api/hello/E2ETest")
+echo "Response: $RESPONSE"
+
+if [[ "$RESPONSE" == *"Hello, E2ETest"* ]]; then
+  echo "Hello API test passed"
+else
+  echo "Hello API test failed"
+  fail
+fi
+
+echo "Testing hellos API..."
+HELLOS=$(curl -s "${API_BASE_URL}/v1/api/hellos")
+echo "Hellos response: $HELLOS"
+
+if [[ "$HELLOS" == *"E2ETest"* ]]; then
+  echo "Hellos API test passed"
+else
+  echo "Hellos API test failed"
+  fail
+fi
+
+echo "Testing ctx API..."
+CTX=$(curl -s "${API_BASE_URL}/v1/api/ctx")
+echo "Ctx response: $CTX"
+
+if [[ "$CTX" == *"/v1/api/ctx"* ]]; then
+  echo "ctx API test passed"
+else
+  echo "ctx API test failed"
+  fail
+fi
+
+
+cleanup
+
+echo "=== Cloudflare E2E Test Passed ==="

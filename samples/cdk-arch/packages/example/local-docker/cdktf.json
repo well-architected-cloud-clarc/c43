@@ -1,0 +1,9 @@
+{
+  "language": "typescript",
+  "app": "npx ts-node src/main.ts",
+  "projectId": "local-docker",
+  "sendCrashReports": false,
+  "terraformProviders": [],
+  "terraformModules": [],
+  "context": {}
+}

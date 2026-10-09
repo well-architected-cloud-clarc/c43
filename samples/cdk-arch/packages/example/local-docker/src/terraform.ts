@@ -1,0 +1,117 @@
+import { App, TerraformStack, TerraformOutput } from 'cdktf';
+import { Construct } from 'constructs';
+import { DockerProvider } from '@cdktf/provider-docker/lib/provider';
+import { Image } from '@cdktf/provider-docker/lib/image';
+import { Container } from '@cdktf/provider-docker/lib/container';
+import { Network } from '@cdktf/provider-docker/lib/network';
+import * as path from 'path';
+
+class HelloWorldStack extends TerraformStack {
+  constructor(scope: Construct, id: string) {
+    super(scope, id);
+
+    new DockerProvider(this, 'docker', {
+      host: `unix://${process.env.XDG_RUNTIME_DIR}/podman/podman.sock`
+    });
+
+    // Create network for service communication
+    const appNetwork = new Network(this, 'app-network', {
+      name: 'hello-world-network'
+    });
+
+    // Build the app image from bundled dist/docker directory
+    const bundleDir = path.resolve(__dirname, '../dist/docker');
+    const dockerFile = path.join(__dirname, 'Dockerfile');
+    const appImage = new Image(this, 'app-image', {
+      name: `cdk-arch-app:${new Date().getTime()}`,
+      buildAttribute: {
+        context: bundleDir,
+        dockerfile: dockerFile
+      },
+      forceRemove: true
+    });
+
+    const postgresImage = new Image(this, 'postgres-image', {
+      name: 'postgres:16-alpine',
+      keepLocally: true
+    });
+
+    // Postgres container for JsonStore
+    new Container(this, 'postgres-container', {
+      name: 'postgres',
+      image: postgresImage.imageId,
+      env: [
+        'POSTGRES_USER=postgres',
+        'POSTGRES_PASSWORD=postgres',
+        'POSTGRES_DB=jsonstore'
+      ],
+      networksAdvanced: [{
+        name: appNetwork.name
+      }],
+      healthcheck: {
+        test: ['CMD-SHELL', 'pg_isready -U postgres'],
+        interval: '5s',
+        timeout: '5s',
+        retries: 5
+      },
+      mustRun: true
+    });
+
+    // JsonStore container
+    new Container(this, 'jsonstore-container', {
+      name: 'jsonstore',
+      image: appImage.imageId,
+      env: [
+        'PORT=3001',
+        'POSTGRES_HOST=postgres',
+        'POSTGRES_PORT=5432',
+        'POSTGRES_DB=jsonstore',
+        'POSTGRES_USER=postgres',
+        'POSTGRES_PASSWORD=postgres'
+      ],
+      networksAdvanced: [{
+        name: appNetwork.name
+      }],
+      command: ['node', 'jsonstore-server.js'],
+      mustRun: true
+    });
+
+    // API container
+    new Container(this, 'api-container', {
+      name: 'hello-api',
+      image: appImage.imageId,
+      ports: [{
+        internal: 3000,
+        external: 3000
+      }],
+      env: [
+        'PORT=3000',
+        'JSONSTORE_HOST=jsonstore',
+        'JSONSTORE_PORT=3001'
+      ],
+      networksAdvanced: [{
+        name: appNetwork.name
+      }],
+      command: ['node', 'api-server.js'],
+      mustRun: true
+    });
+
+    new TerraformOutput(this, 'api-endpoint', {
+      value: 'http://localhost:3000/v1/api/hello/{name}',
+      description: 'API endpoint for the hello service'
+    });
+
+    new TerraformOutput(this, 'example-curl', {
+      value: 'curl http://localhost:3000/v1/api/hello/world',
+      description: 'Example curl command to test the API'
+    });
+  }
+}
+
+export const synth_local_docker = () => {
+  const app = new App();
+  new HelloWorldStack(app, 'hello-world');
+  app.synth();
+
+  return app;
+}
