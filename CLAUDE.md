@@ -5,6 +5,9 @@ a task cannot be completed before
 - `cargo test` succeeds
 - keep original task description in moth files, append specification-relevant parts
 
+this is a multi-repo setup, each repo having its own set of moth tasks.
+when a task involves a change in the neighbouring repo, the commit message should include `[proj][taskid]` before the message
+
 # for rust
 
 - use functional style when working with collections, e.g. instead of for-loops use iterator adapters

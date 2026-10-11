@@ -65,7 +65,7 @@ C4Context
 
 - Known limits, accepted for now: an icon sitting on a node near the top of a group can poke through the group's top border (no room is reserved above nodes); a split label can still be wider than a very narrow lane (the lane width is the engine's); a group's bottom text band can be crossed by an edge routed through the bottom lane.
 - Depends on jet9f for node and group roles; until then there is no role source. c43 already reads an optional `role` node attribute (JSON `attributes.role`) and shows it when present, so the look works as soon as the output carries it.
-- c43 depends on the unreleased `c43-layout` option `titleBottom` (local branch `title-bottom` there); c43's dependency points at the local path until c43-layout is committed and pushed, then it must be pinned to that revision again (release gate).
+- c43 depends on the `c43-layout` option `titleBottom` (c43-layout commit d748b4e, pushed to its main); c43's dependency is pinned to that revision.
 
 ## Implementation (abstract)
 
