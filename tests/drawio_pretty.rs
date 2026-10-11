@@ -98,7 +98,9 @@ fn icons_sit_on_the_top_edge_at_the_left_corner_half_outside() {
     let x = xml();
     ["user", "store", "bus"].iter().for_each(|id| {
         let (n, i) = (cell(&x, &format!("n-{id}")), cell(&x, &format!("i-{id}")));
-        assert!(attr(i, "style").contains("data:image/svg+xml,"));
+        // native drawio shapes (vector in every export), no embedded images
+        assert!(attr(i, "style").contains("strokeColor=none"), "{id}: the first cell is the icon's box");
+        assert!(x.contains(&format!("id=\"i-{id}-1\"")), "{id}: parts follow the box");
         assert_eq!(num(i, "x") + num(i, "width") / 2.0, num(n, "x"), "{id}");
         // the cell is the artwork's size: no empty margin below the sit line
         assert!(num(i, "height") < num(i, "width"), "{id}");
@@ -131,4 +133,12 @@ fn role_is_read_from_the_node_attributes_and_widens_the_node() {
     };
     let (short, long) = (with("x"), with("an exceptionally long role description of a system"));
     assert!(num(cell(&long, "n-api"), "width") > num(cell(&short, "n-api"), "width"));
+}
+
+#[test]
+fn icons_are_native_shapes_not_images() {
+    let x = xml();
+    assert!(!x.contains("data:image") && !x.contains("shape=image"));
+    // one cell per part: the box and the shapes of the icon file
+    assert!(x.matches("id=\"i-user").count() >= 3);
 }

@@ -2,7 +2,7 @@
 pub mod export;
 pub mod graph;
 pub mod header;
-pub mod native_icons;
+pub mod icon_files;
 pub mod pretty;
 pub mod text;
 

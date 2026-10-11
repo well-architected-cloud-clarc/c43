@@ -31,24 +31,6 @@ impl Icon {
             Icon::User | Icon::Bus => 0.0,
         }
     }
-
-    /// height over width of the icon's artwork (its svg viewBox), so the cell has no empty margin and the sit line is where it is drawn
-    fn aspect(self) -> f64 {
-        match self {
-            Icon::User => 9.718853 / 10.149083,
-            Icon::Db | Icon::Store => 9.9476194 / 10.2925,
-            Icon::Bus => 9.7866592 / 10.270384,
-        }
-    }
-
-    fn svg(self) -> &'static str {
-        match self {
-            Icon::User => include_str!("icons/user.svg"),
-            Icon::Db => include_str!("icons/db.svg"),
-            Icon::Store => include_str!("icons/bucket.svg"),
-            Icon::Bus => include_str!("icons/pipe.svg"),
-        }
-    }
 }
 
 /// per-case hints for the look, from a hints file: the icon of nodes by id (until the c43 output carries it)
@@ -100,22 +82,6 @@ fn html(lines: &[Line]) -> String {
     esc(&body)
 }
 
-const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-fn base64(data: &[u8]) -> String {
-    data.chunks(3)
-        .flat_map(|c| {
-            let n = c.iter().enumerate().fold(0u32, |n, (i, b)| n | (*b as u32) << (16 - 8 * i));
-            (0..=c.len()).map(move |i| B64[(n >> (18 - 6 * i) & 63) as usize] as char).chain(std::iter::repeat('=').take(3 - c.len()))
-        })
-        .collect()
-}
-
-/// drawio image style of an icon: a data URI without `;base64` (the style syntax uses `;`)
-fn icon_style(icon: Icon) -> String {
-    format!("shape=image;aspect=fixed;imageAspect=0;image=data:image/svg+xml,{};", base64(icon.svg().as_bytes()))
-}
-
 impl Styler<'_> {
     /// the Pretty C4 look; `meta` is keyed by node and group id, unknown ids get plain text and no icon
     pub fn pretty(meta: &IndexMap<String, Meta>) -> Styler<'_> {
@@ -130,14 +96,8 @@ impl Styler<'_> {
                 let node = vertex(&format!("n-{}", esc(&n.id)), &html(&lines), &style, n.x * u, n.y * u, side, side);
                 // the icon sits on top of the node, its sit line overlapping the node's outline (its half width, the outline being centred on the edge), with half of its width outside on the left
                 let icon = m.icon.map_or(vec![], |i| {
-                    let h = ICON_PX * i.aspect();
-                    let (x, y) = (n.x * u - ICON_PX / 2.0, n.y * u + NODE_STROKE / 2.0 - h * (1.0 - i.below_sit_line()));
-                    // experiment: C43_NATIVE_ICONS=1 draws the icons with native drawio shapes
-                    if std::env::var("C43_NATIVE_ICONS").is_ok() {
-                        super::native_icons::cells(i, &format!("i-{}", esc(&n.id)), x, y, ICON_PX, h)
-                    } else {
-                        vec![vertex(&format!("i-{}", esc(&n.id)), "", &icon_style(i), x, y, ICON_PX, h)]
-                    }
+                    let h = super::icon_files::height(i);
+                    super::icon_files::cells(i, &format!("i-{}", esc(&n.id)), n.x * u - ICON_PX / 2.0, n.y * u + NODE_STROKE / 2.0 - h * (1.0 - i.below_sit_line()))
                 });
                 std::iter::once(node).chain(icon).collect()
             }),

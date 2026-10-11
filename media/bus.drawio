@@ -1,0 +1,6 @@
+<mxfile host="c43"><diagram name="bus" id="bus"><mxGraphModel grid="1" gridSize="1" page="0" background="#ffffff"><root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="icon" value="" style="fillColor=none;strokeColor=none;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="32" height="30.49" as="geometry" /></mxCell>
+<mxCell id="part" value="" style="shape=cylinder3;boundedLbl=1;rotation=90;strokeWidth=3.1;fillColor=#ffffff;strokeColor=#000203;size=5.76;" vertex="1" parent="1"><mxGeometry x="2.28" y="0.85" width="27.44" height="28.8" as="geometry" /></mxCell>
+</root></mxGraphModel></diagram></mxfile>

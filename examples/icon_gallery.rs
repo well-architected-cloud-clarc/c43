@@ -1,4 +1,4 @@
-//! Experiment driver: a drawio with one node per icon. `C43_NATIVE_ICONS=1` switches to native shapes.
+//! A drawio with one node per icon, to look at the icons.
 //! usage: cargo run --example icon_gallery > out/gallery.drawio
 use c43::drawio::graph::doc_from_json;
 use c43::drawio::pretty::PrettyHints;

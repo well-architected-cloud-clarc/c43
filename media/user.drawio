@@ -1,0 +1,7 @@
+<mxfile host="c43"><diagram name="user" id="user"><mxGraphModel grid="1" gridSize="1" page="0" background="#ffffff"><root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="icon" value="" style="fillColor=none;strokeColor=none;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="32" height="30.64" as="geometry" /></mxCell>
+<mxCell id="part-body" value="" style="rounded=1;arcSize=35;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" vertex="1" parent="1"><mxGeometry x="1.6" y="16.39" width="28.8" height="12.72" as="geometry" /></mxCell>
+<mxCell id="part" value="" style="ellipse;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" vertex="1" parent="1"><mxGeometry x="9.28" y="1.53" width="13.44" height="13.18" as="geometry" /></mxCell>
+</root></mxGraphModel></diagram></mxfile>
