@@ -1,6 +1,6 @@
 //! The Pretty C4 look: outlined square nodes with centered name/role text, icons sitting on the node's top-left corner, barrels for data stores.
-use super::export::{esc, vertex_in, EdgeDraw, Styler};
-use super::text::{wrap, LABEL_PX, LINE_H, PAD};
+use c43_layout::drawio::export::{esc, vertex_in, EdgeDraw, Styler};
+use c43_layout::drawio::text::{wrap, LABEL_PX, LINE_H, PAD};
 use c43_layout::js::num;
 use c43_layout::model::Kind;
 use indexmap::IndexMap;
@@ -87,52 +87,50 @@ fn text_cells(ids: (&str, &str), parent: &str, lines: &[Line], align: &str, x: f
         .collect()
 }
 
-impl Styler<'_> {
-    /// the Pretty C4 look; `meta` is keyed by node and group id, unknown ids get plain text and no icon
-    pub fn pretty(meta: &IndexMap<String, Meta>) -> Styler<'_> {
-        let meta_of = move |id: &str| meta.get(id).cloned().unwrap_or_default();
-        Styler {
-            node: Box::new(move |n, _, u| {
-                let m = meta_of(&n.id);
-                let (side, nx, ny) = (n.size * u, n.x * u, n.y * u);
-                let lines = text_lines(&n.label, m.role.as_deref(), side - 2.0 * PAD).unwrap_or_else(|| vec![Line { text: n.label.clone(), bold: true }]);
-                // the icon sits on top of the node, its sit line overlapping the node's outline (the outline being centred on the edge), with half of its width outside on the left
-                let icon = m.icon.map(|i| {
-                    let d = super::icon_files::load(i).expect("icon file");
-                    let at = (nx - d.width / 2.0, ny + NODE_STROKE / 2.0 - d.height * (1.0 - d.below_sit_line));
-                    (d, at)
-                });
-                // one drawio group per node: the square, its text and its icon move together
-                let (gx, gy) = icon.as_ref().map_or((nx, ny), |(_, (ix, iy))| (ix.min(nx), iy.min(ny)));
-                let gid = format!("ng-{}", esc(&n.id));
-                let id = esc(&n.id);
-                let style = format!("fillColor=#ffffff;rounded=0;strokeWidth={};", num(NODE_STROKE));
-                let top = ny + (side - lines.len() as f64 * LABEL_PX * LINE_H) / 2.0;
-                std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, nx + side - gx, ny + side - gy))
-                    .chain(std::iter::once(vertex_in(&format!("n-{id}"), &gid, "", &style, nx - gx, ny - gy, side, side)))
-                    .chain(text_cells((&format!("nt-{id}"), &format!("nr-{id}")), &gid, &lines, "center", nx, top, side, (gx, gy)))
-                    .chain(icon.iter().flat_map(|(d, (ix, iy))| d.cells_in(&gid, &format!("i-{id}"), ix - gx, iy - gy)))
-                    .collect()
-            }),
-            group: Box::new(move |g, u| {
-                let m = meta_of(&g.id);
-                let lines = std::iter::once(Line { text: g.label.clone(), bold: true }).chain(m.role.map(|r| Line { text: role_text(&r), bold: false })).collect::<Vec<_>>();
-                // the engine keeps a band for the text at the bottom of the group; the text is left aligned and sits at the bottom of that band
-                let (gx, gy, t, id) = (g.x * u, g.y * u, &g.title, esc(&g.id));
-                let gid = format!("gg-{id}");
-                let top = (t.y + t.h) * u - lines.len() as f64 * LABEL_PX * LINE_H;
-                std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, g.w * u, g.h * u))
-                    .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(LINE)), 0.0, 0.0, g.w * u, g.h * u)))
-                    .chain(text_cells((&format!("gt-{id}"), &format!("gr-{id}")), &gid, &lines, "left", t.x * u, top, t.w * u, (gx, gy)))
-                    .collect()
-            }),
-            edge: Box::new(|e| EdgeDraw {
-                // the label sits above its line, not on it
-                style: format!("strokeWidth={};verticalAlign=bottom;{}", num(LINE), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
-                moved: None,
-                straight: false,
-            }),
-            label_font: LABEL_PX,
-        }
+/// the Pretty C4 look; `meta` is keyed by node and group id, unknown ids get plain text and no icon
+pub fn pretty_styler(meta: &IndexMap<String, Meta>) -> Styler<'_> {
+    let meta_of = move |id: &str| meta.get(id).cloned().unwrap_or_default();
+    Styler {
+        node: Box::new(move |n, _, u| {
+            let m = meta_of(&n.id);
+            let (side, nx, ny) = (n.size * u, n.x * u, n.y * u);
+            let lines = text_lines(&n.label, m.role.as_deref(), side - 2.0 * PAD).unwrap_or_else(|| vec![Line { text: n.label.clone(), bold: true }]);
+            // the icon sits on top of the node, its sit line overlapping the node's outline (the outline being centred on the edge), with half of its width outside on the left
+            let icon = m.icon.map(|i| {
+                let d = super::icon_files::load(i).expect("icon file");
+                let at = (nx - d.width / 2.0, ny + NODE_STROKE / 2.0 - d.height * (1.0 - d.below_sit_line));
+                (d, at)
+            });
+            // one drawio group per node: the square, its text and its icon move together
+            let (gx, gy) = icon.as_ref().map_or((nx, ny), |(_, (ix, iy))| (ix.min(nx), iy.min(ny)));
+            let gid = format!("ng-{}", esc(&n.id));
+            let id = esc(&n.id);
+            let style = format!("fillColor=#ffffff;rounded=0;strokeWidth={};", num(NODE_STROKE));
+            let top = ny + (side - lines.len() as f64 * LABEL_PX * LINE_H) / 2.0;
+            std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, nx + side - gx, ny + side - gy))
+                .chain(std::iter::once(vertex_in(&format!("n-{id}"), &gid, "", &style, nx - gx, ny - gy, side, side)))
+                .chain(text_cells((&format!("nt-{id}"), &format!("nr-{id}")), &gid, &lines, "center", nx, top, side, (gx, gy)))
+                .chain(icon.iter().flat_map(|(d, (ix, iy))| d.cells_in(&gid, &format!("i-{id}"), ix - gx, iy - gy)))
+                .collect()
+        }),
+        group: Box::new(move |g, u| {
+            let m = meta_of(&g.id);
+            let lines = std::iter::once(Line { text: g.label.clone(), bold: true }).chain(m.role.map(|r| Line { text: role_text(&r), bold: false })).collect::<Vec<_>>();
+            // the engine keeps a band for the text at the bottom of the group; the text is left aligned and sits at the bottom of that band
+            let (gx, gy, t, id) = (g.x * u, g.y * u, &g.title, esc(&g.id));
+            let gid = format!("gg-{id}");
+            let top = (t.y + t.h) * u - lines.len() as f64 * LABEL_PX * LINE_H;
+            std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, g.w * u, g.h * u))
+                .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(LINE)), 0.0, 0.0, g.w * u, g.h * u)))
+                .chain(text_cells((&format!("gt-{id}"), &format!("gr-{id}")), &gid, &lines, "left", t.x * u, top, t.w * u, (gx, gy)))
+                .collect()
+        }),
+        edge: Box::new(|e| EdgeDraw {
+            // the label sits above its line, not on it
+            style: format!("strokeWidth={};verticalAlign=bottom;{}", num(LINE), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
+            moved: None,
+            straight: false,
+        }),
+        label_font: LABEL_PX,
     }
 }
