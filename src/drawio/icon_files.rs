@@ -3,7 +3,7 @@
 //! Its first vertex is the icon: a transparent box with the icon's extent, whose style may carry `c43SitLine=<f>`, the
 //! fraction of the box's height that hangs below the line the icon sits on (0 when absent; for a barrel the line through
 //! the leftmost and rightmost points of its bottom oval). The further vertices are the parts of the icon.
-use super::export::vertex_in;
+use c43_layout::drawio::export::vertex_in;
 use super::pretty::Icon;
 use roxmltree::{Document, Node};
 

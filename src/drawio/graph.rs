@@ -1,6 +1,6 @@
 //! C4 document → layout graph and hints.
 use super::pretty::{group_text_width, node_side, Meta};
-use super::text::{edge_label_lines, LABEL_PX, LINE_H, UNIT_PX};
+use c43_layout::drawio::text::{edge_label_lines, LABEL_PX, LINE_H, UNIT_PX};
 use crate::model::{C4Document, NodeAttributes};
 use c43_layout::model::{Hints, InputEdge, InputGraph, InputGroup, InputNode, SizeHints};
 use indexmap::{IndexMap, IndexSet};
