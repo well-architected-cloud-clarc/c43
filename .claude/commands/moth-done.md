@@ -4,5 +4,5 @@ update moth task specification
 run the usual validation tools if any
 mark current moth task as done (this is an explicit override of the general rule, because i asked you to)
 
-add, commit and push changes. at the the repo should be clean of changes and on main.
+add, commit and push changes for all sibling repos affected in the change. at the the repo should be clean of changes and on main.
 
