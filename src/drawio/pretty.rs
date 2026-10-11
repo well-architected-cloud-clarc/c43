@@ -129,9 +129,15 @@ impl Styler<'_> {
                 let style = format!("html=1;whiteSpace=nowrap;fontSize={};strokeWidth={};fillColor=#ffffff;rounded=0;", num(LABEL_PX), num(NODE_STROKE));
                 let node = vertex(&format!("n-{}", esc(&n.id)), &html(&lines), &style, n.x * u, n.y * u, side, side);
                 // the icon sits on top of the node, its sit line overlapping the node's outline (its half width, the outline being centred on the edge), with half of its width outside on the left
-                let icon = m.icon.map(|i| {
+                let icon = m.icon.map_or(vec![], |i| {
                     let h = ICON_PX * i.aspect();
-                    vertex(&format!("i-{}", esc(&n.id)), "", &icon_style(i), n.x * u - ICON_PX / 2.0, n.y * u + NODE_STROKE / 2.0 - h * (1.0 - i.below_sit_line()), ICON_PX, h)
+                    let (x, y) = (n.x * u - ICON_PX / 2.0, n.y * u + NODE_STROKE / 2.0 - h * (1.0 - i.below_sit_line()));
+                    // experiment: C43_NATIVE_ICONS=1 draws the icons with native drawio shapes
+                    if std::env::var("C43_NATIVE_ICONS").is_ok() {
+                        super::native_icons::cells(i, &format!("i-{}", esc(&n.id)), x, y, ICON_PX, h)
+                    } else {
+                        vec![vertex(&format!("i-{}", esc(&n.id)), "", &icon_style(i), x, y, ICON_PX, h)]
+                    }
                 });
                 std::iter::once(node).chain(icon).collect()
             }),
