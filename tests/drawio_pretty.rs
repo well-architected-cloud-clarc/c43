@@ -1,5 +1,6 @@
 use c43::drawio::graph::doc_from_json;
-use c43::drawio::pretty::PrettyHints;
+use c43::drawio::icon_files::{load, parse};
+use c43::drawio::pretty::{Icon, PrettyHints};
 use c43::drawio::render_with_hints;
 use serde_json::json;
 
@@ -105,7 +106,7 @@ fn icons_sit_on_the_top_edge_at_the_left_corner_half_outside() {
         // the cell is the artwork's size: no empty margin below the sit line
         assert!(num(i, "height") < num(i, "width"), "{id}");
         // the sit line (the icon's bottom, 2 px = half the node outline below the node's top edge so the two overlap), except for a barrel: its bottom oval hangs below the line through the oval's extremes
-        let hang = if *id == "store" { 0.1005 * num(i, "height") } else { 0.0 };
+        let hang = if *id == "store" { 0.1 * num(i, "height") } else { 0.0 };
         assert!((num(i, "y") + num(i, "height") - hang - num(n, "y") - 2.0).abs() < 1e-6, "{id}");
     });
     assert!(!x.contains("id=\"i-api\""));
@@ -141,4 +142,48 @@ fn icons_are_native_shapes_not_images() {
     assert!(!x.contains("data:image") && !x.contains("shape=image"));
     // one cell per part: the box and the shapes of the icon file
     assert!(x.matches("id=\"i-user").count() >= 3);
+}
+
+#[test]
+fn every_icon_file_loads_and_has_a_box_and_parts() {
+    [Icon::User, Icon::Db, Icon::Store, Icon::Bus].iter().for_each(|i| {
+        let d = load(*i).unwrap_or_else(|e| panic!("{i:?}: {e}"));
+        assert!(d.width > 0.0 && d.height > 0.0 && (0.0..0.5).contains(&d.below_sit_line), "{i:?}");
+        assert!(d.cells("x", 0.0, 0.0).len() >= 2, "{i:?}");
+    });
+    // only the barrels hang below their sit line
+    assert!(load(Icon::Db).unwrap().below_sit_line > 0.0 && load(Icon::Store).unwrap().below_sit_line > 0.0);
+    assert_eq!((load(Icon::User).unwrap().below_sit_line, load(Icon::Bus).unwrap().below_sit_line), (0.0, 0.0));
+}
+
+#[test]
+fn an_icon_file_saved_by_the_drawio_editor_parses() {
+    // pretty-printed, attributes in the editor's order, geometry on its own line, extra cells and attributes
+    let saved = r##"<mxfile host="app.diagrams.net" modified="2026-10-11T12:00:00.000Z" agent="x" version="24.0.0">
+  <diagram id="d" name="Page-1">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="icon" parent="1" style="fillColor=none;strokeColor=none;c43SitLine=0.25;" value="" vertex="1">
+          <mxGeometry height="20" width="40" x="10" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="a" parent="1" style="ellipse;" value="" vertex="1">
+          <mxGeometry height="8" width="8" x="12" y="6" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"##;
+    let d = parse(saved).unwrap();
+    assert_eq!((d.width, d.height, d.below_sit_line), (40.0, 20.0, 0.25));
+    let cells = d.cells("i-n", 100.0, 200.0);
+    assert_eq!(cells.len(), 2);
+    assert!(cells[1].contains("id=\"i-n-1\"") && cells[1].contains("x=\"112\"") && cells[1].contains("y=\"206\""));
+}
+
+#[test]
+fn a_compressed_icon_file_is_reported_not_misread() {
+    let compressed = r#"<mxfile><diagram id="d" name="p">dZHBDoIwDIafZvcxFbgbBA+evHgZ</diagram></mxfile>"#;
+    assert!(parse(compressed).is_err());
 }

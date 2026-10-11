@@ -12,7 +12,6 @@ pub const NODE_STROKE: f64 = 4.0 * LINE;
 pub const FRAME_STROKE: f64 = 2.0 * LINE;
 /// smallest node side in grid units: room for the hanging icon
 const MIN_SIDE: f64 = 5.0;
-const ICON_PX: f64 = 32.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -21,16 +20,6 @@ pub enum Icon {
     Db,
     Store,
     Bus,
-}
-
-impl Icon {
-    /// fraction of the icon's height below its sit line: the bottom oval of a barrel hangs below the line joining the oval's leftmost and rightmost points (1.0 / 9.95 in `media/icons.svg`)
-    fn below_sit_line(self) -> f64 {
-        match self {
-            Icon::Db | Icon::Store => 0.1005,
-            Icon::User | Icon::Bus => 0.0,
-        }
-    }
 }
 
 /// per-case hints for the look, from a hints file: the icon of nodes by id (until the c43 output carries it)
@@ -96,8 +85,8 @@ impl Styler<'_> {
                 let node = vertex(&format!("n-{}", esc(&n.id)), &html(&lines), &style, n.x * u, n.y * u, side, side);
                 // the icon sits on top of the node, its sit line overlapping the node's outline (its half width, the outline being centred on the edge), with half of its width outside on the left
                 let icon = m.icon.map_or(vec![], |i| {
-                    let h = super::icon_files::height(i);
-                    super::icon_files::cells(i, &format!("i-{}", esc(&n.id)), n.x * u - ICON_PX / 2.0, n.y * u + NODE_STROKE / 2.0 - h * (1.0 - i.below_sit_line()))
+                    let d = super::icon_files::load(i).expect("icon file");
+                    d.cells(&format!("i-{}", esc(&n.id)), n.x * u - d.width / 2.0, n.y * u + NODE_STROKE / 2.0 - d.height * (1.0 - d.below_sit_line))
                 });
                 std::iter::once(node).chain(icon).collect()
             }),

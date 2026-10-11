@@ -13,6 +13,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 walkdir = "2"
 indexmap = "2"
+roxmltree = "0.20"
 
 [dev-dependencies]
 tempfile = "3"
