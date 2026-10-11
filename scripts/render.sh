@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 # Render generated drawio files to PNG and SVG with the drawio CLI (dev aid only).
 # Usage: scripts/render.sh [file.drawio | dir ...]   (default: the golden cases under fixtures/layout-cases)
-# With no arguments the goldens are rebuilt first (cargo build, UPDATE_GOLDEN=1 drawio_golden tests), so edits to the code,
-# the icons under media/ or the fixtures show up; SKIP_REBUILD=1 renders the goldens as they are.
+# The goldens are rendered as they are; FULL_REBUILD=1 rebuilds them first (cargo build, UPDATE_GOLDEN=1 drawio_golden tests,
+# about 2 minutes), so edits to the code, the icons under media/ or the fixtures show up. Only without arguments.
 # Output: out/<name>.{png,svg}; <name> = case dir for */expected.drawio, else the file's basename
 set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v drawio >/dev/null || { echo "drawio CLI not found (nix-shell provides drawio-headless)" >&2; exit 2; }
 
 rebuild=0
-[ $# -gt 0 ] || rebuild=1
-[ -z "${SKIP_REBUILD:-}" ] || rebuild=0
+[ $# -gt 0 ] || [ -z "${FULL_REBUILD:-}" ] || rebuild=1
 if [ "$rebuild" = 1 ]; then
-  echo "rebuilding goldens"
+  echo "FULL_REBUILD: rebuilding goldens first"
   cargo build --quiet
   UPDATE_GOLDEN=1 cargo test --quiet --test drawio_golden >/dev/null
+elif [ $# -eq 0 ]; then
+  echo "rendering the goldens as they are (FULL_REBUILD=1 rebuilds them first)"
 fi
 mkdir -p out
 
