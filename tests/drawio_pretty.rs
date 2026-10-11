@@ -103,7 +103,7 @@ fn icons_sit_on_the_top_edge_at_the_left_corner_half_outside() {
         // the cell is the artwork's size: no empty margin below the sit line
         assert!(num(i, "height") < num(i, "width"), "{id}");
         // the sit line (the icon's bottom, 2 px = half the node outline below the node's top edge so the two overlap), except for a barrel: its bottom oval hangs below the line through the oval's extremes
-        let hang = if id == "store" { 0.1005 * num(i, "height") } else { 0.0 };
+        let hang = if *id == "store" { 0.1005 * num(i, "height") } else { 0.0 };
         assert!((num(i, "y") + num(i, "height") - hang - num(n, "y") - 2.0).abs() < 1e-6, "{id}");
     });
     assert!(!x.contains("id=\"i-api\""));
