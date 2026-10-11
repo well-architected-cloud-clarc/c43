@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-c43-layout = { git = "https://github.com/well-architected-cloud-clarc/c43-layout", rev = "d748b4e5676761127c14128d0d61132fb43dc929" }
+c43-layout = { git = "https://github.com/well-architected-cloud-clarc/c43-layout", rev = "a3d60b961aecb792e35550dbdf2630b9cb8c746a" }
 swc_ecma_parser = { version = "35", features = ["typescript"] }
 swc_common = "19"
 swc_ecma_ast = "21"
