@@ -102,7 +102,8 @@ impl Styler<'_> {
                 ]
             }),
             edge: Box::new(|e| EdgeDraw {
-                style: format!("strokeWidth={};{}", num(LINE), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
+                // the label sits above its line, not on it
+                style: format!("strokeWidth={};verticalAlign=bottom;{}", num(LINE), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
                 moved: None,
                 straight: false,
             }),

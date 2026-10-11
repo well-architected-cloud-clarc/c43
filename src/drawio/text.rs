@@ -92,3 +92,19 @@ pub fn label_side(labels: &[&str], unit_px: f64) -> f64 {
         s
     })
 }
+
+/// widest an edge label line is allowed to be before the label is split, in px (lanes between nodes are a few units wide)
+pub const EDGE_LABEL_PX: f64 = 80.0;
+/// most lines an edge label is split into
+pub const EDGE_LABEL_LINES: usize = 3;
+
+/// an edge label split into at most `EDGE_LABEL_LINES` lines of about equal width, one line when it is short
+pub fn edge_label_lines(label: &str) -> Vec<String> {
+    let total = text_width(label, LABEL_PX, false);
+    let n = ((total / EDGE_LABEL_PX).ceil() as usize).clamp(1, EDGE_LABEL_LINES);
+    if n == 1 {
+        return vec![label.to_string()];
+    }
+    // the narrowest width that wraps into n lines (a little over the even share, wider while a word does not fit)
+    (0..).map(|k| total / n as f64 * 1.1 + 4.0 * k as f64).find_map(|px| wrap(label, px, LABEL_PX, false).filter(|ls| ls.len() <= n)).unwrap_or_else(|| vec![label.to_string()])
+}

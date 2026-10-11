@@ -9,5 +9,5 @@
 <mxCell id="i-cdk-arch-web" value="" style="fillColor=none;strokeColor=none;" vertex="1" parent="1"><mxGeometry x="84" y="71.36" width="32" height="30.64" as="geometry" /></mxCell>
 <mxCell id="i-cdk-arch-web-1" value="" style="rounded=1;arcSize=35;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" vertex="1" parent="1"><mxGeometry x="85.6" y="87.75" width="28.8" height="12.72" as="geometry" /></mxCell>
 <mxCell id="i-cdk-arch-web-2" value="" style="ellipse;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" vertex="1" parent="1"><mxGeometry x="93.28" y="72.89" width="13.44" height="13.18" as="geometry" /></mxCell>
-<mxCell id="e-0" style="edgeStyle=none;rounded=0;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=1;" edge="1" parent="1" source="n-cdk-arch-web" target="n-backend:hello-world"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+<mxCell id="e-0" style="edgeStyle=none;rounded=0;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=1;verticalAlign=bottom;" edge="1" parent="1" source="n-cdk-arch-web" target="n-backend:hello-world"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
 </root></mxGraphModel></diagram></mxfile>

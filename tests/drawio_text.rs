@@ -40,3 +40,23 @@ fn label_side_smallest_square_holding_the_wrapped_label() {
     assert!(label_side(&["@bob/frontend"], u) >= label_side(&["frontend"], u));
     assert_eq!(label_side(&["a", "dispatcher"], u), s);
 }
+
+#[test]
+fn short_edge_labels_stay_on_one_line_long_ones_split_into_two_or_three() {
+    use c43::drawio::text::{edge_label_lines, text_width, EDGE_LABEL_LINES, EDGE_LABEL_PX, LABEL_PX};
+    assert_eq!(edge_label_lines("says hello"), ["says hello"]);
+    let two = edge_label_lines("persists hellos");
+    assert_eq!(two.len(), 2, "{two:?}");
+    let long = "reads and writes the greeting records of every polite person";
+    let many = edge_label_lines(long);
+    assert!(many.len() >= 2 && many.len() <= EDGE_LABEL_LINES, "{many:?}");
+    // nothing is lost or reordered, and lines stay near the target width
+    assert_eq!(many.join(" "), long);
+    many.iter().for_each(|l| assert!(text_width(l, LABEL_PX, false) < 2.0 * EDGE_LABEL_PX, "{l}"));
+}
+
+#[test]
+fn an_unbreakable_edge_label_is_kept_whole() {
+    use c43::drawio::text::edge_label_lines;
+    assert_eq!(edge_label_lines("averyveryveryverylonglabelwithoutspacesatall"), ["averyveryveryverylonglabelwithoutspacesatall"]);
+}

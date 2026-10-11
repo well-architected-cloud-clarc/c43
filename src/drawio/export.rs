@@ -112,7 +112,7 @@ pub fn to_drawio(d: &Drawing) -> String {
             pts.iter_mut().rev().take(trail).for_each(|p| p.1 += ndy);
         }
         let mids: String = pts.iter().map(|(x, y)| format!("<mxPoint x=\"{}\" y=\"{}\" />", num(*x), num(*y))).collect();
-        let value = e.label.as_ref().map_or(String::new(), |t| format!(" value=\"{}\"", esc(t)));
+        let value = e.label.as_ref().map_or(String::new(), |t| format!(" value=\"{}\"", esc(t).replace('\n', "&#xa;")));
         cells.push(format!(
             "<mxCell id=\"e-{}\"{value} style=\"{style}\" edge=\"1\" parent=\"1\" source=\"{}\" target=\"{}\"><mxGeometry relative=\"1\" as=\"geometry\">{}</mxGeometry></mxCell>",
             e.id,

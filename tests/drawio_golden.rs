@@ -73,7 +73,7 @@ fn hello_world_mermaid() {
     golden("hello-world-mermaid");
     let x = drawn("hello-world-mermaid");
     assert!(x.contains("[ enterprise boundary ]") && x.contains("[ software") && x.contains("[ database ]"));
-    assert!(x.contains("value=\"says hello\"") && x.contains("value=\"persists hellos\""));
+    assert!(x.contains("value=\"says hello\"") && x.contains("value=\"persists&#xa;hellos\""));
 }
 
 #[test]
