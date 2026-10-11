@@ -14,6 +14,9 @@ pub struct NodeAttributes {
     /// `construct`); the node `type` is the concrete class name
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
+    /// C4 role of the node (e.g. `software system`), shown by the drawio rendering
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
 }
 
 impl Node {

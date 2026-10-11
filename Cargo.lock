@@ -152,7 +152,6 @@ dependencies = [
 [[package]]
 name = "c43-layout"
 version = "0.1.0"
-source = "git+https://github.com/well-architected-cloud-clarc/c43-layout?rev=6affa682e2badcddfa3f8d6a861fb8b14a13d472#6affa682e2badcddfa3f8d6a861fb8b14a13d472"
 dependencies = [
  "indexmap",
  "serde",

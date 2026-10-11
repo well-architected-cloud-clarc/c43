@@ -1,5 +1,6 @@
 //! C4 document → layout graph and hints.
-use super::text::{label_side, text_width, LABEL_PX, LINE_H, UNIT_PX};
+use super::pretty::{group_text_width, node_side, Meta};
+use super::text::{LABEL_PX, LINE_H, UNIT_PX};
 use crate::model::{C4Document, NodeAttributes};
 use c43_layout::model::{Hints, InputEdge, InputGraph, InputGroup, InputNode, SizeHints};
 use indexmap::{IndexMap, IndexSet};
@@ -9,6 +10,8 @@ pub struct Built {
     pub hints: Hints,
     /// relations that could not be drawn as given, and what was done about them
     pub warnings: Vec<String>,
+    /// role and icon per node and group id
+    pub meta: IndexMap<String, Meta>,
 }
 
 /// a C4 document from its JSON form (`{nodes:[{uid,name,type,attributes}], relations:[{start,is,end}]}`)
@@ -18,7 +21,7 @@ pub fn doc_from_json(v: &serde_json::Value) -> C4Document {
     for n in v["nodes"].as_array().into_iter().flatten() {
         let a = &n["attributes"];
         let opt = |k: &str| a[k].as_str().map(String::from);
-        let attributes = NodeAttributes { project: opt("project"), file: opt("file"), variable: opt("variable"), kind: opt("kind") };
+        let attributes = NodeAttributes { project: opt("project"), file: opt("file"), variable: opt("variable"), kind: opt("kind"), role: opt("role") };
         doc.add_node(&s(n, "uid"), &s(n, "name"), &s(n, "type"), attributes);
     }
     for r in v["relations"].as_array().into_iter().flatten() {
@@ -112,17 +115,24 @@ pub fn build(doc: &C4Document) -> Built {
         .into_iter()
         .map(|((from, to), is)| InputEdge { from, to, label: labelled.then(|| is.join(", ")) })
         .collect();
+    let meta: IndexMap<String, Meta> = doc
+        .nodes
+        .iter()
+        // a node's role is its type until the c43 output carries roles; groups only have a role when given one
+        .map(|n| (n.uid.clone(), Meta { role: n.attributes.role.clone().or_else(|| (!group_ids.contains(n.uid.as_str())).then(|| n.node_type.clone())), icon: None }))
+        .collect();
+    let role = |id: &str| meta.get(id).and_then(|m| m.role.as_deref());
     let sizes = SizeHints {
-        node: nodes.iter().map(|n| (n.id.clone(), label_side(&[n.label.as_deref().unwrap_or(&n.id)], UNIT_PX))).collect(),
-        group_title: groups
-            .iter()
-            .map(|g| (g.id.clone(), (text_width(g.label.as_deref().unwrap_or(&g.id), LABEL_PX, true) + LABEL_PX / 2.0) / UNIT_PX))
-            .collect(),
-        title_height: (LABEL_PX * LINE_H / UNIT_PX).ceil(),
+        node: nodes.iter().map(|n| (n.id.clone(), node_side(n.label.as_deref().unwrap_or(&n.id), role(&n.id), UNIT_PX))).collect(),
+        group_title: groups.iter().map(|g| (g.id.clone(), group_text_width(g.label.as_deref().unwrap_or(&g.id), role(&g.id)) / UNIT_PX)).collect(),
+        // the group text (name, and role if any) sits in a band at the bottom of the groups
+        title_height: (if groups.iter().any(|g| role(&g.id).is_some()) { 2.0 } else { 1.0 } * LABEL_PX * LINE_H / UNIT_PX).ceil(),
+        title_bottom: true,
     };
     Built {
         graph: InputGraph { title, description: None, groups, nodes, edges },
         hints: Hints { kinds: vec![], placement: vec![], sizes, gravity: false },
         warnings,
+        meta,
     }
 }

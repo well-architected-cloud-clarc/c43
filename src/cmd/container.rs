@@ -46,6 +46,7 @@ pub fn run(root: &Path) -> C4Document {
             file: Some(rel_path(&c.file, root_str)),
             variable: c.var_name.clone(),
             kind: Some(c.kind.as_str().to_string()),
+            role: None,
         });
         doc.add_relation(&backend_uid(&arch.id), "contains", uid);
     }

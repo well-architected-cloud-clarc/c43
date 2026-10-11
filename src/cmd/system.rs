@@ -44,6 +44,7 @@ pub fn run(root: &Path) -> C4Document {
         file: None,
         variable: None,
         kind: None,
+        role: None,
     });
 
     let project_data = scan_projects(&root);
@@ -72,6 +73,7 @@ pub fn run(root: &Path) -> C4Document {
                     file: Some(rel_file),
                     variable: c.var_name.clone(),
                     kind: Some(c.kind.as_str().to_string()),
+                    role: None,
                 });
                 doc.add_relation(&system_name, "contains", &uid);
                 arch_by_definer.entry(&pd.name).or_default().push(uid);
@@ -91,6 +93,7 @@ pub fn run(root: &Path) -> C4Document {
                     file: None,
                     variable: None,
                     kind: None,
+                    role: None,
                 });
                 doc.add_relation(&system_name, "contains", &pd.name);
 

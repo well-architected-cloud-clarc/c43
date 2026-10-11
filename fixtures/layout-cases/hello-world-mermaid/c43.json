@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    {"uid": "system:hello", "name": "Hello world system", "type": "system", "attributes": {}},
+    {"uid": "user", "name": "A polite person who says hello", "type": "person", "attributes": {"role": "person"}},
+    {"uid": "enterprise", "name": "Hello Inc.", "type": "boundary", "attributes": {"role": "enterprise boundary"}},
+    {"uid": "api", "name": "Greeting system", "type": "backend", "attributes": {"role": "software system"}},
+    {"uid": "store", "name": "Greeting storage", "type": "database", "attributes": {"role": "database"}}
+  ],
+  "relations": [
+    {"start": "enterprise", "is": "contains", "end": "api"},
+    {"start": "enterprise", "is": "contains", "end": "store"},
+    {"start": "user", "is": "says hello", "end": "api"},
+    {"start": "api", "is": "persists hellos", "end": "store"}
+  ]
+}

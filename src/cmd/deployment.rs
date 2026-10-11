@@ -53,6 +53,7 @@ pub fn run(arch_path: &Path, infra_path: &Path) -> C4Document {
                         file: Some(rel_file),
                         variable: c.var_name.clone(),
                         kind: None,
+                        role: None,
                     }
                 }
                 None => NodeAttributes {
@@ -60,6 +61,7 @@ pub fn run(arch_path: &Path, infra_path: &Path) -> C4Document {
                     file: None,
                     variable: Some(bind.component_var.clone()),
                     kind: None,
+                    role: None,
                 },
             };
             doc.add_node(&component_id, &component_id, &component_type, attrs);
@@ -73,6 +75,7 @@ pub fn run(arch_path: &Path, infra_path: &Path) -> C4Document {
                     file: Some(bind.file.clone()),
                     variable: None,
                     kind: None,
+                    role: None,
                 });
             }
             doc.add_relation(&component_id, "deployed on", &endpoint_id);

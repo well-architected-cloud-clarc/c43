@@ -1,7 +1,7 @@
 //! A layout as a drawio document.
 use super::header::Header;
 use c43_layout::js::num;
-use c43_layout::model::{Kind, Layout, LayoutEdge, LayoutGroup, LayoutNode, Rect, Side, TextBlock};
+use c43_layout::model::{Layout, LayoutEdge, LayoutGroup, LayoutNode, Rect, Side, TextBlock};
 
 pub fn esc(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
@@ -18,11 +18,6 @@ fn rel(side: Side, index: usize, count: usize) -> (f64, f64) {
     }
 }
 
-/// engine-broken lines as one plain-text value (drawio newline entity)
-fn lines(ls: &[String]) -> String {
-    ls.iter().map(|l| esc(l)).collect::<Vec<_>>().join("&#xa;")
-}
-
 pub fn vertex(id: &str, value: &str, style: &str, x: f64, y: f64, w: f64, h: f64) -> String {
     format!(
         "<mxCell id=\"{id}\" value=\"{value}\" style=\"{style}\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" as=\"geometry\" /></mxCell>",
@@ -31,7 +26,6 @@ pub fn vertex(id: &str, value: &str, style: &str, x: f64, y: f64, w: f64, h: f64
 }
 
 /// node outline is drawn thicker than edges (default width 1)
-const NODE_STROKE: u32 = 2;
 /// invisible space around the frame: drawio crops exports to content, which would clip the frame line
 const MARGIN_PX: f64 = 20.0;
 
@@ -54,32 +48,6 @@ pub struct Styler<'a> {
     pub label_font: f64,
 }
 
-impl Styler<'_> {
-    pub fn plain(label_font: f64) -> Styler<'static> {
-        Styler {
-            node: Box::new(move |n, ls, u| {
-                let style = format!(
-                    "html=0;whiteSpace=nowrap;aspect=fixed;fontSize={};strokeWidth={NODE_STROKE};{}",
-                    num(label_font),
-                    if n.kind == Kind::Nf { "dashed=1;" } else { "" }
-                );
-                vec![vertex(&format!("n-{}", esc(&n.id)), &lines(ls), &style, n.x * u, n.y * u, n.size * u, n.size * u)]
-            }),
-            group: Box::new(move |g, u| {
-                // unfilled rectangle plus a one-line bold title at label size
-                let title_style = format!("text;html=0;whiteSpace=nowrap;align=left;verticalAlign=top;spacing=0;fontStyle=1;fontSize={};", num(label_font));
-                let t = &g.title;
-                vec![
-                    vertex(&format!("g-{}", esc(&g.id)), "", "rounded=0;fillColor=none;", g.x * u, g.y * u, g.w * u, g.h * u),
-                    vertex(&format!("gt-{}", esc(&g.id)), &esc(&g.label), &title_style, t.x * u, t.y * u, t.w * u, t.h * u),
-                ]
-            }),
-            edge: Box::new(|e| EdgeDraw { style: if e.kind == Kind::Nf { "dashed=1;".into() } else { String::new() }, moved: None, straight: false }),
-            label_font,
-        }
-    }
-}
-
 /// what the renderer adds to the engine's layout: pixel scale, label lines, header band, outer frame, fonts
 pub struct Drawing<'a> {
     pub layout: &'a Layout,
@@ -89,6 +57,8 @@ pub struct Drawing<'a> {
     pub frame: Rect,
     pub style: Styler<'a>,
     pub title_font: f64,
+    /// style of the outer diagram border
+    pub frame_style: &'a str,
 }
 
 pub fn to_drawio(d: &Drawing) -> String {
@@ -97,7 +67,7 @@ pub fn to_drawio(d: &Drawing) -> String {
     let (f, m) = (&d.frame, MARGIN_PX);
     // the margin also paints the white background (the drawio CLI exports SVG transparent otherwise)
     cells.push(vertex("margin", "", "strokeColor=none;fillColor=#ffffff;", f.x * u - m, f.y * u - m, f.w * u + 2.0 * m, f.h * u + 2.0 * m));
-    cells.push(vertex("frame", "", "rounded=0;fillColor=none;", f.x * u, f.y * u, f.w * u, f.h * u));
+    cells.push(vertex("frame", "", d.frame_style, f.x * u, f.y * u, f.w * u, f.h * u));
     // header text is wrapped by drawio within the block width
     let text = format!("text;html=0;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontSize={};", num(d.title_font));
     let block = |id: &str, b: &TextBlock, style: &str| vertex(id, &esc(&b.text), style, b.x * u, b.y * u, b.w * u, b.h * u);

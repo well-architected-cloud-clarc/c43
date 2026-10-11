@@ -1,0 +1,46 @@
+{
+  "nodes": [
+    {
+      "uid": "system:example",
+      "name": "example",
+      "type": "system",
+      "attributes": {}
+    },
+    {
+      "uid": "backend:hello-world",
+      "name": "hello-world",
+      "type": "backend",
+      "attributes": {
+        "project": "architecture",
+        "file": "architecture/src/architecture.ts",
+        "variable": "arch",
+        "kind": "architecture"
+      }
+    },
+    {
+      "uid": "cdk-arch-web",
+      "name": "cdk-arch-web",
+      "type": "frontend",
+      "attributes": {
+        "project": "cdk-arch-web"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "start": "system:example",
+      "is": "contains",
+      "end": "backend:hello-world"
+    },
+    {
+      "start": "system:example",
+      "is": "contains",
+      "end": "cdk-arch-web"
+    },
+    {
+      "start": "cdk-arch-web",
+      "is": "uses",
+      "end": "backend:hello-world"
+    }
+  ]
+}
