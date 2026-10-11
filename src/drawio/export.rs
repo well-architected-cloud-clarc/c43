@@ -19,8 +19,14 @@ fn rel(side: Side, index: usize, count: usize) -> (f64, f64) {
 }
 
 pub fn vertex(id: &str, value: &str, style: &str, x: f64, y: f64, w: f64, h: f64) -> String {
+    vertex_in(id, "1", value, style, x, y, w, h)
+}
+
+/// a vertex inside `parent` (the layer `1` or a group cell); its position is relative to the parent
+#[allow(clippy::too_many_arguments)]
+pub fn vertex_in(id: &str, parent: &str, value: &str, style: &str, x: f64, y: f64, w: f64, h: f64) -> String {
     format!(
-        "<mxCell id=\"{id}\" value=\"{value}\" style=\"{style}\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" as=\"geometry\" /></mxCell>",
+        "<mxCell id=\"{id}\" value=\"{value}\" style=\"{style}\" vertex=\"1\" parent=\"{parent}\"><mxGeometry x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" as=\"geometry\" /></mxCell>",
         num(x), num(y), num(w), num(h)
     )
 }
@@ -68,9 +74,9 @@ pub fn to_drawio(d: &Drawing) -> String {
     // the margin also paints the white background (the drawio CLI exports SVG transparent otherwise)
     cells.push(vertex("margin", "", "strokeColor=none;fillColor=#ffffff;", f.x * u - m, f.y * u - m, f.w * u + 2.0 * m, f.h * u + 2.0 * m));
     cells.push(vertex("frame", "", d.frame_style, f.x * u, f.y * u, f.w * u, f.h * u));
-    // header text is wrapped by drawio within the block width
-    let text = format!("text;html=0;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontSize={};", num(d.title_font));
-    let block = |id: &str, b: &TextBlock, style: &str| vertex(id, &esc(&b.text), style, b.x * u, b.y * u, b.w * u, b.h * u);
+    // header text is plain, already wrapped into lines (so it exports as text, not as an image)
+    let text = format!("text;html=0;whiteSpace=nowrap;align=left;verticalAlign=top;spacing=0;fontSize={};", num(d.title_font));
+    let block = |id: &str, b: &TextBlock, style: &str| vertex(id, &esc(&b.text).replace('\n', "&#xa;"), style, b.x * u, b.y * u, b.w * u, b.h * u);
     if let Some(t) = d.header.as_ref().and_then(|h| h.title.as_ref()) {
         cells.push(block("title", t, &format!("{text}fontStyle=1;")));
     }

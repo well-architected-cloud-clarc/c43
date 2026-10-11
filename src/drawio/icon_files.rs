@@ -3,7 +3,7 @@
 //! Its first vertex is the icon: a transparent box with the icon's extent, whose style may carry `c43SitLine=<f>`, the
 //! fraction of the box's height that hangs below the line the icon sits on (0 when absent; for a barrel the line through
 //! the leftmost and rightmost points of its bottom oval). The further vertices are the parts of the icon.
-use super::export::vertex;
+use super::export::vertex_in;
 use super::pretty::Icon;
 use roxmltree::{Document, Node};
 
@@ -59,10 +59,15 @@ pub fn parse(src: &str) -> Result<Def, String> {
 impl Def {
     /// the cells of the icon moved to `(x, y)`; the first has id `id` (already escaped), the others `id-<n>`
     pub fn cells(&self, id: &str, x: f64, y: f64) -> Vec<String> {
+        self.cells_in("1", id, x, y)
+    }
+
+    /// as `cells`, inside the group cell `parent` (positions relative to it)
+    pub fn cells_in(&self, parent: &str, id: &str, x: f64, y: f64) -> Vec<String> {
         self.cells
             .iter()
             .enumerate()
-            .map(|(i, c)| vertex(&if i == 0 { id.to_string() } else { format!("{id}-{i}") }, "", &c.style, x + c.x, y + c.y, c.w, c.h))
+            .map(|(i, c)| vertex_in(&if i == 0 { id.to_string() } else { format!("{id}-{i}") }, parent, "", &c.style, x + c.x, y + c.y, c.w, c.h))
             .collect()
     }
 }

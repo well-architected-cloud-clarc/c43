@@ -48,9 +48,22 @@ fn style_num(line: &str, k: &str) -> f64 {
     line.split(&format!("{k}=")).nth(1).unwrap().split(';').next().unwrap().parse().unwrap()
 }
 
-/// the node text as drawio shows it: html with tags kept, attribute escaping undone
-fn html(line: &str) -> String {
-    attr(line, "value").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")
+/// a cell's text: attribute escaping undone, lines separated by `\n`
+fn text(line: &str) -> String {
+    attr(line, "value").replace("&#xa;", "\n").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")
+}
+
+/// absolute (x, y, width, height) of a cell: positions inside a group cell are relative to it
+fn pos(xml: &str, id: &str) -> (f64, f64, f64, f64) {
+    let l = cell(xml, id);
+    let (x, y) = (num(l, "x"), num(l, "y"));
+    match attr(l, "parent").as_str() {
+        "1" => (x, y, num(l, "width"), num(l, "height")),
+        p => {
+            let (px, py, _, _) = pos(xml, p);
+            (px + x, py + y, num(l, "width"), num(l, "height"))
+        }
+    }
 }
 
 #[test]
@@ -70,44 +83,75 @@ fn nodes_stay_squares() {
 }
 
 #[test]
-fn node_text_is_bold_name_then_role_in_brackets() {
+fn node_text_is_a_bold_name_cell_then_a_role_cell_in_brackets() {
     let x = xml();
-    assert_eq!(html(cell(&x, "n-api")), "<b>Greeting</b><br><b>system</b><br>[ software<br>system ]");
+    let (name, role) = (cell(&x, "nt-api"), cell(&x, "nr-api"));
+    assert_eq!(text(name), "Greeting\nsystem");
+    assert_eq!(text(role), "[ software\nsystem ]");
+    assert!(attr(name, "style").contains("fontStyle=1;") && attr(role, "style").contains("fontStyle=0;"));
+    // plain text, no html: it exports as text, not as an image
+    assert!(!x.contains("html=1"));
+    // the role is under the name, both centred in the square
+    let (sq, n, r) = (pos(&x, "n-api"), pos(&x, "nt-api"), pos(&x, "nr-api"));
+    assert!(r.1 >= n.1 + n.3 - 1e-9);
+    assert!(((n.1 + (r.1 + r.3 - n.1) / 2.0) - (sq.1 + sq.3 / 2.0)).abs() < 1e-6);
 }
 
 #[test]
 fn node_without_a_given_role_shows_its_type() {
     let x = xml();
-    assert_eq!(html(cell(&x, "n-bus")), "<b>Events</b><br>[ eventbus ]");
+    assert_eq!(text(cell(&x, "nt-bus")), "Events");
+    assert_eq!(text(cell(&x, "nr-bus")), "[ eventbus ]");
+}
+
+#[test]
+fn a_node_is_one_group_holding_its_square_text_and_icon() {
+    let x = xml();
+    let g = cell(&x, "ng-user");
+    assert!(attr(g, "style").contains("group"));
+    ["n-user", "nt-user", "nr-user", "i-user", "i-user-1"].iter().for_each(|id| assert_eq!(attr(cell(&x, id), "parent"), "ng-user", "{id}"));
+    // the group spans the square and the icon hanging off its corner
+    let (gx, gy, gw, gh) = pos(&x, "ng-user");
+    let (sx, sy, sw, sh) = pos(&x, "n-user");
+    let (ix, iy, _, _) = pos(&x, "i-user");
+    assert_eq!((gx, gy), (ix.min(sx), iy.min(sy)));
+    assert_eq!((gx + gw, gy + gh), (sx + sw, sy + sh));
+    // a node without an icon: the group is the square
+    assert_eq!(pos(&x, "ng-api"), pos(&x, "n-api"));
+    // edges still end on the square
+    assert!(x.contains("target=\"n-api\"") && !x.contains("target=\"ng-"));
 }
 
 #[test]
 fn group_text_is_bottom_left_inside_the_group() {
     let x = xml();
-    let (g, t) = (cell(&x, "g-g"), cell(&x, "gt-g"));
-    assert_eq!(html(t), "<b>Hello Inc.</b><br>[ enterprise boundary ]");
-    assert!(attr(t, "style").contains("align=left"));
-    assert!(num(t, "x") > num(g, "x") && num(t, "x") + num(t, "width") <= num(g, "x") + num(g, "width"));
-    // the text block ends above the frame's bottom line
-    assert!(num(t, "y") + num(t, "height") < num(g, "y") + num(g, "height"));
-    // and lies in the bottom half
-    assert!(num(t, "y") > num(g, "y") + num(g, "height") / 2.0);
+    let (g, n, r) = (pos(&x, "g-g"), pos(&x, "gt-g"), pos(&x, "gr-g"));
+    assert_eq!((text(cell(&x, "gt-g")).as_str(), text(cell(&x, "gr-g")).as_str()), ("Hello Inc.", "[ enterprise boundary ]"));
+    assert!(attr(cell(&x, "gt-g"), "style").contains("align=left") && attr(cell(&x, "gr-g"), "style").contains("align=left"));
+    assert!(n.0 > g.0 && n.0 + n.2 <= g.0 + g.2);
+    // the role is under the name, the block ends above the frame's bottom line, in the bottom half
+    assert!(r.1 >= n.1 + n.3 - 1e-9);
+    assert!(r.1 + r.3 < g.1 + g.3);
+    assert!(n.1 > g.1 + g.3 / 2.0);
+    // frame and text are one drawio group
+    assert_eq!((attr(cell(&x, "g-g"), "parent"), attr(cell(&x, "gt-g"), "parent")), ("gg-g".to_string(), "gg-g".to_string()));
 }
 
 #[test]
 fn icons_sit_on_the_top_edge_at_the_left_corner_half_outside() {
     let x = xml();
     ["user", "store", "bus"].iter().for_each(|id| {
-        let (n, i) = (cell(&x, &format!("n-{id}")), cell(&x, &format!("i-{id}")));
+        let (n, i) = (pos(&x, &format!("n-{id}")), pos(&x, &format!("i-{id}")));
+        let icon_cell = cell(&x, &format!("i-{id}"));
         // native drawio shapes (vector in every export), no embedded images
-        assert!(attr(i, "style").contains("strokeColor=none"), "{id}: the first cell is the icon's box");
+        assert!(attr(icon_cell, "style").contains("strokeColor=none"), "{id}: the first cell is the icon's box");
         assert!(x.contains(&format!("id=\"i-{id}-1\"")), "{id}: parts follow the box");
-        assert_eq!(num(i, "x") + num(i, "width") / 2.0, num(n, "x"), "{id}");
+        assert!((i.0 + i.2 / 2.0 - n.0).abs() < 1e-9, "{id}");
         // the cell is the artwork's size: no empty margin below the sit line
-        assert!(num(i, "height") < num(i, "width"), "{id}");
+        assert!(i.3 < i.2, "{id}");
         // the sit line (the icon's bottom, 2 px = half the node outline below the node's top edge so the two overlap), except for a barrel: its bottom oval hangs below the line through the oval's extremes
-        let hang = if *id == "store" { 0.1 * num(i, "height") } else { 0.0 };
-        assert!((num(i, "y") + num(i, "height") - hang - num(n, "y") - 2.0).abs() < 1e-6, "{id}");
+        let hang = if *id == "store" { 0.1 * i.3 } else { 0.0 };
+        assert!((i.1 + i.3 - hang - n.1 - 2.0).abs() < 1e-6, "{id}");
     });
     assert!(!x.contains("id=\"i-api\""));
     assert!(!x.contains("id=\"i-g\""));

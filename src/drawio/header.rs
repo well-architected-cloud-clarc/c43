@@ -30,11 +30,11 @@ pub fn header(title: Option<&str>, description: Option<&str>, grid_w: f64, unit_
         let h = ((2.0 * PAD + (tl.len() + dl.len()) as f64 * TITLE_PX * LINE_H) / unit_px).ceil();
         let (x, bw, ty) = (pad, w - 2.0 * pad, -h + pad);
         let dy = ty + tl.len() as f64 * lh;
-        let block = |text: &str, y: f64, n: usize| TextBlock { text: text.to_string(), x, y, w: bw, h: n as f64 * lh };
+        let block = |lines: &[String], y: f64| TextBlock { text: lines.join("\n"), x, y, w: bw, h: lines.len() as f64 * lh };
         return Some(Header {
             rect: Rect { x: 0.0, y: -h, w, h },
-            title: title.map(|t| block(t, ty, tl.len())),
-            description: description.map(|d| block(d, dy, dl.len())),
+            title: title.map(|_| block(&tl, ty)),
+            description: description.map(|_| block(&dl, dy)),
         });
     }
 }

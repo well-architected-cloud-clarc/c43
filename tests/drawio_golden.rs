@@ -102,9 +102,9 @@ fn cell_line<'a>(xml: &'a str, id: &str) -> &'a str {
 fn labels_are_xml_escaped_and_unicode_is_kept() {
     let g = graph(json!({"title": "T & <x>", "nodes": [{"id":"A","label":"R&D <core> \"x\" — Ünï"},{"id":"B"}], "edges": [{"from":"A","to":"B"}]}));
     let xml = draw(&g, &Hints::default());
-    let value = cell_line(&xml, "n-A").split("value=\"").nth(1).unwrap().split('"').next().unwrap();
-    // the node text is html (bold name), so the value is escaped twice
-    assert_eq!(value.replace("&lt;br&gt;", " ").replace("&lt;b&gt;", "").replace("&lt;/b&gt;", ""), "R&amp;amp;D &amp;lt;core&amp;gt; &amp;quot;x&amp;quot; — Ünï");
+    // the name is a plain-text cell of its own (lines separated by the xml newline)
+    let value = cell_line(&xml, "nt-A").split("value=\"").nth(1).unwrap().split('"').next().unwrap();
+    assert_eq!(value.replace("&#xa;", " "), "R&amp;D &lt;core&gt; &quot;x&quot; — Ünï");
     assert!(!xml.contains("<core>"));
     assert!(cell_line(&xml, "title").contains("value=\"T &amp; &lt;x&gt;\""));
 }
