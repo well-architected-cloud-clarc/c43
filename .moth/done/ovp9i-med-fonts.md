@@ -40,3 +40,7 @@ also the minimal width for generated png should be 1024px (including the goldens
 
 
 
+
+## clarc
+
+- Carried to clarc (commit `[clarc][ovp9i]`): same two vendored fonts and families (`Elms Sans` for group names, `Elms Sans Thin` for the rest), c43-layout pinned to cfa9ea8, node label lines re-wrapped and node/group widths measured with the Elms Sans faces, no bold, `render.sh` with the 1024 px minimum. Goldens regenerated; a test checks the families, no bold, and the font data once per family. Strokes and icon placement are not changed in clarc (not part of this carry).
