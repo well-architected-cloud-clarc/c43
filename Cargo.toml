@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-c43-layout = { git = "https://github.com/well-architected-cloud-clarc/c43-layout", rev = "a3d60b961aecb792e35550dbdf2630b9cb8c746a" }
+c43-layout = { git = "https://github.com/well-architected-cloud-clarc/c43-layout", rev = "cfa9ea83503080034c16c652d3c6f90af111819e" }
 swc_ecma_parser = { version = "35", features = ["typescript"] }
 swc_common = "19"
 swc_ecma_ast = "21"
@@ -13,6 +13,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 walkdir = "2"
 indexmap = "2"
+base64 = "0.22"
 roxmltree = "0.20"
 
 [dev-dependencies]

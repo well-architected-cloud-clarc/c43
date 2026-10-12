@@ -1,12 +1,14 @@
 //! drawio rendering of a C4 document through the c43-layout engine.
 pub use c43_layout::drawio::{export, header, render_styled, text};
+mod elms_metrics;
+pub mod fonts;
 pub mod graph;
 pub mod icon_files;
 pub mod pretty;
 
 use crate::model::C4Document;
 use c43_layout::model::{Lanes, Layout, Rect};
-use c43_layout::drawio::render_with;
+use c43_layout::drawio::render_fonts;
 use indexmap::IndexMap;
 use pretty::{Meta, PrettyHints, FRAME_STROKE};
 
@@ -24,7 +26,7 @@ pub fn render_layout(l: &Layout, title: Option<&str>, description: Option<&str>)
 /// as `render_layout`, with roles and icons of nodes and groups given
 pub fn render_pretty(l: &Layout, title: Option<&str>, description: Option<&str>, meta: &IndexMap<String, Meta>) -> String {
     let frame_style = format!("rounded=0;fillColor=none;strokeWidth={};", c43_layout::js::num(FRAME_STROKE));
-    render_with(l, title, description, pretty::pretty_styler(meta), &frame_style)
+    render_fonts(l, title, description, pretty::pretty_styler(meta), &frame_style, Some(&fonts::fonts()))
 }
 
 /// an empty grid: only the frame (and the title above it) is drawn

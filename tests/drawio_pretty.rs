@@ -69,11 +69,11 @@ fn pos(xml: &str, id: &str) -> (f64, f64, f64, f64) {
 #[test]
 fn strokes_are_4_2_1() {
     let x = xml();
-    assert_eq!(style_num(cell(&x, "n-api"), "strokeWidth"), 4.0);
-    assert_eq!(style_num(cell(&x, "frame"), "strokeWidth"), 2.0);
-    assert_eq!(style_num(cell(&x, "g-g"), "strokeWidth"), 1.0);
+    assert_eq!(style_num(cell(&x, "n-api"), "strokeWidth"), 2.0);
+    assert_eq!(style_num(cell(&x, "frame"), "strokeWidth"), 1.0);
+    assert_eq!(style_num(cell(&x, "g-g"), "strokeWidth"), 0.5);
     let edge = x.lines().find(|l| l.contains("edge=\"1\"")).unwrap();
-    assert_eq!(style_num(edge, "strokeWidth"), 1.0);
+    assert_eq!(style_num(edge, "strokeWidth"), 0.5);
 }
 
 #[test]
@@ -83,12 +83,12 @@ fn nodes_stay_squares() {
 }
 
 #[test]
-fn node_text_is_a_bold_name_cell_then_a_role_cell_in_brackets() {
+fn node_text_is_a_name_cell_then_a_role_cell_in_brackets() {
     let x = xml();
     let (name, role) = (cell(&x, "nt-api"), cell(&x, "nr-api"));
     assert_eq!(text(name), "Greeting\nsystem");
     assert_eq!(text(role), "[ software\nsystem ]");
-    assert!(attr(name, "style").contains("fontStyle=1;") && attr(role, "style").contains("fontStyle=0;"));
+    assert!(attr(name, "style").contains("fontFamily=Elms Sans;") && attr(role, "style").contains("fontFamily=Elms Sans Thin;"));
     // plain text, no html: it exports as text, not as an image
     assert!(!x.contains("html=1"));
     // the role is under the name, both centred in the square
@@ -149,9 +149,9 @@ fn icons_sit_on_the_top_edge_at_the_left_corner_half_outside() {
         assert!((i.0 + i.2 / 2.0 - n.0).abs() < 1e-9, "{id}");
         // the cell is the artwork's size: no empty margin below the sit line
         assert!(i.3 < i.2, "{id}");
-        // the sit line (the icon's bottom, 2 px = half the node outline below the node's top edge so the two overlap), except for a barrel: its bottom oval hangs below the line through the oval's extremes
+        // the sit line (the icon's bottom, half the node outline plus half the icon stroke below the node's top edge, so the icon's bottom line lies on the inner edge of the outline), except for a barrel: its bottom oval hangs below the line through the oval's extremes
         let hang = if *id == "store" { 0.1 * i.3 } else { 0.0 };
-        assert!((i.1 + i.3 - hang - n.1 - 2.0).abs() < 1e-6, "{id}");
+        assert!((i.1 + i.3 - hang - n.1 - (2.0 + 1.55) / 2.0).abs() < 1e-6, "{id}");
     });
     assert!(!x.contains("id=\"i-api\""));
     assert!(!x.contains("id=\"i-g\""));
@@ -230,4 +230,50 @@ fn an_icon_file_saved_by_the_drawio_editor_parses() {
 fn a_compressed_icon_file_is_reported_not_misread() {
     let compressed = r#"<mxfile><diagram id="d" name="p">dZHBDoIwDIafZvcxFbgbBA+evHgZ</diagram></mxfile>"#;
     assert!(parse(compressed).is_err());
+}
+
+/// every text is set in Elms Sans: names in weight 400, the rest in weight 100; no bold style fakes a heavier face
+#[test]
+fn all_text_is_elms_sans_and_none_is_bold() {
+    let x = xml();
+    let texts: Vec<&str> = x.lines().filter(|l| l.contains("style=\"text;") && !l.contains("fontSource")).collect();
+    assert!(texts.len() > 6);
+    texts.iter().for_each(|l| assert!(l.contains("fontFamily=Elms Sans;") || l.contains("fontFamily=Elms Sans Thin;"), "{l}"));
+    assert!(!x.contains("fontStyle"));
+    ["nt-api", "gt-g"].iter().for_each(|id| assert!(cell(&x, id).contains("fontFamily=Elms Sans;"), "{id}"));
+    ["nr-api", "gr-g"].iter().for_each(|id| assert!(cell(&x, id).contains("fontFamily=Elms Sans Thin;"), "{id}"));
+    let edge = x.lines().find(|l| l.contains("edge=\"1\"")).unwrap();
+    assert!(edge.contains("fontFamily=Elms Sans Thin;"));
+}
+
+/// the font data is in the document once per family, as a woff2 data URI (not once per text cell)
+#[test]
+fn font_data_is_embedded_once_per_family() {
+    let x = xml();
+    assert_eq!(x.matches("fontSource=").count(), 2);
+    let carrier = |id: &str, family: &str| {
+        let l = cell(&x, id);
+        assert!(l.contains(&format!("fontFamily={family};")) && l.contains("fontSource=data%3Afont/woff2%3Bbase64%2C"), "{id}");
+    };
+    carrier("font-regular", "Elms Sans Thin");
+    carrier("font-name", "Elms Sans");
+    // the two files differ
+    let src = |id: &str| attr(cell(&x, id), "style").split("fontSource=").nth(1).unwrap().to_string();
+    assert_ne!(src("font-regular"), src("font-name"));
+    // attribute-safe: the data carries nothing that separates style parts or ends the attribute
+    assert!(!src("font-name").trim_end_matches(';').contains([';', '"', '+', '=']));
+}
+
+/// the width estimate is Elms Sans's: a text is never wider than its node's inner box
+#[test]
+fn node_text_fits_the_square_with_the_elms_sans_widths() {
+    use c43::drawio::fonts::{NAME_FACE, REGULAR_FACE};
+    use c43_layout::drawio::text::{text_width_in, LABEL_PX, PAD};
+    let x = xml();
+    ["api", "store", "user", "bus"].iter().for_each(|id| {
+        let side = num(cell(&x, &format!("n-{id}")), "width");
+        [("nt-", &NAME_FACE), ("nr-", &REGULAR_FACE)].iter().filter(|(p, _)| x.contains(&format!("id=\"{p}{id}\""))).for_each(|(p, f)| {
+            text(cell(&x, &format!("{p}{id}"))).lines().for_each(|line| assert!(text_width_in(line, LABEL_PX, f) <= side - 2.0 * PAD + 1e-9, "{id}: {line}"));
+        });
+    });
 }

@@ -1,15 +1,20 @@
 //! The Pretty C4 look: outlined square nodes with centered name/role text, icons sitting on the node's top-left corner, barrels for data stores.
 use c43_layout::drawio::export::{esc, vertex_in, EdgeDraw, Styler};
-use c43_layout::drawio::text::{wrap, LABEL_PX, LINE_H, PAD};
+use super::fonts::{self, NAME_FACE, REGULAR_FACE};
+use c43_layout::drawio::text::{text_width_in, wrap_in, Face, LABEL_PX, LINE_H, PAD};
 use c43_layout::js::num;
 use c43_layout::model::Kind;
 use indexmap::IndexMap;
 use serde::Deserialize;
 
 /// connection line width in px; a node outline is 4x, the outer diagram border 2x
-pub const LINE: f64 = 1.0;
+pub const LINE: f64 = 0.5;
 pub const NODE_STROKE: f64 = 4.0 * LINE;
 pub const FRAME_STROKE: f64 = 2.0 * LINE;
+/// an edge label wider than this is split into lines: about the width of the lane an edge runs in between two nodes
+pub const EDGE_LABEL_PX: f64 = 48.0;
+/// stroke of the icon parts in the icon files (px): the icon's bottom line lies fully inside the node, on the inner edge of its outline
+pub const ICON_STROKE: f64 = 1.55;
 /// smallest node side in grid units: room for the hanging icon
 const MIN_SIDE: f64 = 5.0;
 
@@ -42,13 +47,18 @@ struct Line {
     bold: bool,
 }
 
+/// how wide the text of a name (bold) or a regular line is set
+fn face(bold: bool) -> &'static Face {
+    if bold { &NAME_FACE } else { &REGULAR_FACE }
+}
+
 fn role_text(role: &str) -> String {
     format!("[ {role} ]")
 }
 
 /// name and role lines wrapped to `inner_px`; None when a word does not fit
 fn text_lines(name: &str, role: Option<&str>, inner_px: f64) -> Option<Vec<Line>> {
-    let part = |t: &str, bold: bool| wrap(t, inner_px, LABEL_PX, bold).map(|ls| ls.into_iter().map(|text| Line { text, bold }).collect::<Vec<_>>());
+    let part = |t: &str, bold: bool| wrap_in(t, inner_px, LABEL_PX, face(bold)).map(|ls| ls.into_iter().map(|text| Line { text, bold }).collect::<Vec<_>>());
     let mut lines = part(name, true)?;
     lines.extend(role.map_or(Some(vec![]), |r| part(&role_text(r), false))?);
     Some(lines)
@@ -62,7 +72,7 @@ pub fn node_side(name: &str, role: Option<&str>, unit_px: f64) -> f64 {
 
 /// widest line of a group's text in px, for the engine to keep the group at least that wide
 pub fn group_text_width(name: &str, role: Option<&str>) -> f64 {
-    let w = |t: &str, bold: bool| super::text::text_width(t, LABEL_PX, bold);
+    let w = |t: &str, bold: bool| text_width_in(t, LABEL_PX, face(bold));
     w(name, true).max(role.map_or(0.0, |r| w(&role_text(r), false))) + LABEL_PX / 2.0
 }
 
@@ -72,7 +82,7 @@ fn text_value(lines: &[&Line]) -> String {
 }
 
 fn text_style(align: &str, bold: bool) -> String {
-    format!("text;html=0;whiteSpace=nowrap;align={align};verticalAlign=middle;spacing=0;fontStyle={};fontSize={};", u8::from(bold), num(LABEL_PX))
+    format!("text;html=0;whiteSpace=nowrap;align={align};verticalAlign=middle;spacing=0;{}fontSize={};", fonts::style(bold), num(LABEL_PX))
 }
 
 /// the name cell (bold) and, when there are role lines, the role cell below it, stacked from `top` (absolute) in a block `w` wide at `x`;
@@ -98,7 +108,7 @@ pub fn pretty_styler(meta: &IndexMap<String, Meta>) -> Styler<'_> {
             // the icon sits on top of the node, its sit line overlapping the node's outline (the outline being centred on the edge), with half of its width outside on the left
             let icon = m.icon.map(|i| {
                 let d = super::icon_files::load(i).expect("icon file");
-                let at = (nx - d.width / 2.0, ny + NODE_STROKE / 2.0 - d.height * (1.0 - d.below_sit_line));
+                let at = (nx - d.width / 2.0, ny + (NODE_STROKE + ICON_STROKE) / 2.0 - d.height * (1.0 - d.below_sit_line));
                 (d, at)
             });
             // one drawio group per node: the square, its text and its icon move together
@@ -127,7 +137,7 @@ pub fn pretty_styler(meta: &IndexMap<String, Meta>) -> Styler<'_> {
         }),
         edge: Box::new(|e| EdgeDraw {
             // the label sits above its line, not on it
-            style: format!("strokeWidth={};verticalAlign=bottom;{}", num(LINE), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
+            style: format!("strokeWidth={};verticalAlign=bottom;{}{}", num(LINE), fonts::style(false), if e.kind == Kind::Nf { "dashed=1;" } else { "" }),
             moved: None,
             straight: false,
         }),
