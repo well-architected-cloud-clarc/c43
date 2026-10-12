@@ -7,10 +7,10 @@
         <mxCell id="icon" value="" style="fillColor=none;strokeColor=none;c43SitLine=0.1;" parent="1" vertex="1">
           <mxGeometry width="32" height="30.93" as="geometry" />
         </mxCell>
-        <mxCell id="part-body" value="" style="shape=trapezoid;perimeter=trapezoidPerimeter;flipV=1;size=0.18;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" parent="1" vertex="1">
+        <mxCell id="part-body" value="" style="shape=trapezoid;perimeter=trapezoidPerimeter;flipV=1;size=0.18;fillColor=#ffffff;strokeColor=#000203;strokeWidth=1.55;" parent="1" vertex="1">
           <mxGeometry x="2" y="7.19" width="28" height="22.81" as="geometry" />
         </mxCell>
-        <mxCell id="part" value="" style="ellipse;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" parent="1" vertex="1">
+        <mxCell id="part" value="" style="ellipse;fillColor=#ffffff;strokeColor=#000203;strokeWidth=1.55;" parent="1" vertex="1">
           <mxGeometry x="1.6" y="1.55" width="28.8" height="9.28" as="geometry" />
         </mxCell>
       </root>

@@ -2,5 +2,5 @@
 <mxCell id="0" />
 <mxCell id="1" parent="0" />
 <mxCell id="icon" value="" style="fillColor=none;strokeColor=none;c43SitLine=0.1;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="32" height="30.93" as="geometry" /></mxCell>
-<mxCell id="part" value="" style="shape=cylinder3;boundedLbl=1;size=5.57;fillColor=#ffffff;strokeColor=#000203;strokeWidth=3.1;" vertex="1" parent="1"><mxGeometry x="1.6" y="1.55" width="28.8" height="27.83" as="geometry" /></mxCell>
+<mxCell id="part" value="" style="shape=cylinder3;boundedLbl=1;size=5.57;fillColor=#ffffff;strokeColor=#000203;strokeWidth=1.55;" vertex="1" parent="1"><mxGeometry x="1.6" y="1.55" width="28.8" height="27.83" as="geometry" /></mxCell>
 </root></mxGraphModel></diagram></mxfile>

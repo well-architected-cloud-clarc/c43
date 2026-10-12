@@ -86,7 +86,8 @@ fn rejected_relations_become_warnings() {
 fn labels_only_with_several_kinds() {
     let nodes = json!([node("a", "x"), node("b", "x"), node("c", "x")]);
     let b = build(&doc_from_json(&json!({"nodes": nodes, "relations": [rel("a", "uses", "b"), rel("a", "reads", "b"), rel("b", "uses", "c")]})));
-    assert_eq!(b.graph.edges.iter().map(|e| e.label.as_deref()).collect::<Vec<_>>(), [Some("uses, reads"), Some("uses")]);
+    // a label wider than a lane is split into lines
+    assert_eq!(b.graph.edges.iter().map(|e| e.label.as_deref().map(|l| l.replace('\n', " "))).collect::<Vec<_>>(), [Some("uses, reads".to_string()), Some("uses".to_string())]);
     let b = build(&doc_from_json(&json!({"nodes": nodes, "relations": [rel("a", "uses", "b"), rel("b", "uses", "c")]})));
     assert!(b.graph.edges.iter().all(|e| e.label.is_none()));
 }
