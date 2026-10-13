@@ -36,19 +36,71 @@ fn system_view_backends_are_nodes() {
 #[test]
 fn hints_size_nodes_for_the_pretty_text_and_put_group_text_at_the_bottom() {
     let sizes = rebob().hints.sizes;
-    assert_eq!(sizes.title_height, 1.0);
+    // the groups carry a role, so their text is two lines
+    assert_eq!(sizes.title_height, 2.0);
     assert!(sizes.title_bottom);
     // room for the hanging icon: no node under 5 units
     assert!(sizes.node.values().all(|s| *s >= 5.0), "{:?}", sizes.node);
-    // the role (the type) is part of the text, so a long type widens its node
-    assert!(sizes.node["consolidator/consolidator-api"] >= 6.0);
 }
 
 #[test]
-fn a_nodes_role_is_its_type_a_groups_only_what_it_was_given() {
+fn a_long_role_widens_its_node() {
+    let with_role = |role: &str| json!({"uid": "n", "name": "n", "type": "x", "attributes": {"role": role}});
+    let side = |role: &str| build(&doc_from_json(&json!({"nodes": [with_role(role)], "relations": []}))).hints.sizes.node["n"];
+    assert!(side("unbreakablerolethatisfarlongerthananodeside") > side("api"));
+}
+
+#[test]
+fn roles_are_read_from_the_output_for_nodes_and_groups() {
     let b = rebob();
-    assert_eq!(b.meta["queue/task-queue"].role.as_deref(), Some("taskqueue"));
-    assert_eq!(b.meta["backend:queue"].role, None);
+    assert_eq!(b.meta["queue/task-queue"].role.as_deref(), Some("event bus"));
+    assert_eq!(b.meta["backend:queue"].role.as_deref(), Some("service"));
+}
+
+#[test]
+fn an_output_without_roles_falls_back_to_the_type_for_nodes_and_none_for_groups() {
+    let doc = doc_from_json(&json!({
+        "nodes": [node("system:s", "system"), node("backend:b", "backend"), node("b/api", "apicontainer")],
+        "relations": [rel("system:s", "contains", "backend:b"), rel("backend:b", "contains", "b/api")]
+    }));
+    let b = build(&doc);
+    assert_eq!(b.meta["b/api"].role.as_deref(), Some("apicontainer"));
+    assert_eq!(b.meta["backend:b"].role, None);
+}
+
+#[test]
+fn icons_follow_the_role() {
+    let with_role = |uid: &str, role: &str| json!({"uid": uid, "name": uid, "type": "x", "attributes": {"role": role}});
+    let doc = doc_from_json(&json!({
+        "nodes": [with_role("p", "person"), with_role("d", "database"), with_role("o", "object store"), with_role("q", "event bus"), with_role("s", "service")],
+        "relations": []
+    }));
+    let icons: Vec<_> = ["p", "d", "o", "q", "s"].iter().map(|id| build(&doc).meta[*id].icon).collect();
+    use c43::drawio::pretty::Icon::*;
+    assert_eq!(icons, [Some(User), Some(Db), Some(Store), Some(Bus), None]);
+}
+
+#[test]
+fn the_system_is_a_boundary_group_only_when_something_sits_outside_it() {
+    let nodes = |outsider: bool| {
+        let mut nodes = vec![node("system:s", "system"), node("backend:b", "backend")];
+        if outsider {
+            nodes.push(node("person:u", "person"));
+        }
+        nodes
+    };
+    let relations = json!([rel("system:s", "contains", "backend:b")]);
+    let alone = build(&doc_from_json(&json!({"nodes": nodes(false), "relations": relations})));
+    assert!(alone.graph.groups.is_empty());
+    assert_eq!(alone.graph.title.as_deref(), Some("system:s"));
+
+    let with_person = build(&doc_from_json(&json!({"nodes": nodes(true), "relations": relations})));
+    assert_eq!(with_person.graph.groups.iter().map(|g| g.id.as_str()).collect::<Vec<_>>(), ["system:s"]);
+    let member = |id: &str| with_person.graph.nodes.iter().find(|n| n.id == id).unwrap().group.clone();
+    assert_eq!(member("backend:b").as_deref(), Some("system:s"));
+    assert_eq!(member("person:u"), None);
+    // the title stays
+    assert_eq!(with_person.graph.title.as_deref(), Some("system:s"));
 }
 
 fn node(uid: &str, ty: &str) -> Value {

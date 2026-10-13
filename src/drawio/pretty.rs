@@ -1,6 +1,7 @@
 //! The Pretty C4 look: outlined square nodes with centered name/role text, icons sitting on the node's top-left corner, barrels for data stores.
 use c43_layout::drawio::export::{esc, vertex_in, EdgeDraw, Styler};
 use super::fonts::{self, NAME_FACE, REGULAR_FACE};
+use crate::roles;
 use c43_layout::drawio::text::{text_width_in, wrap_in, Face, LABEL_PX, LINE_H, PAD};
 use c43_layout::js::num;
 use c43_layout::model::Kind;
@@ -27,7 +28,20 @@ pub enum Icon {
     Bus,
 }
 
-/// per-case hints for the look, from a hints file: the icon of nodes by id (until the c43 output carries it)
+impl Icon {
+    /// the icon a role is drawn with, if it has one
+    pub fn of_role(role: &str) -> Option<Icon> {
+        match role {
+            roles::PERSON => Some(Icon::User),
+            roles::DATABASE => Some(Icon::Db),
+            roles::OBJECT_STORE => Some(Icon::Store),
+            roles::EVENT_BUS => Some(Icon::Bus),
+            _ => None,
+        }
+    }
+}
+
+/// per-case hints for the look, from a hints file: icons by node id, overriding the ones roles give
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PrettyHints {
     #[serde(default)]

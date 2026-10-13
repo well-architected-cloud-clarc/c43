@@ -31,6 +31,25 @@ fn build_relations_suffix(
     rels_str
 }
 
+/// ` (role)` after the name, only when the role tells something the type label does not: not for
+/// the fixed system-level types (their role is a function of the type), not when it repeats the
+/// type or is the plain `container` fallback
+fn role_suffix(node: &Node) -> String {
+    const SYSTEM_TYPES: &[&str] = &["system", "backend", "frontend", "client", "person", "externalsystem", "subsystem"];
+    match node.attributes.role.as_deref() {
+        Some(role)
+            if !SYSTEM_TYPES.contains(&node.node_type.as_str())
+                && role != crate::roles::CONTAINER
+                && role != crate::roles::FUNCTION
+                && role != crate::roles::API
+                && !role.replace(' ', "").eq_ignore_ascii_case(&node.node_type) =>
+        {
+            format!(" ({})", role)
+        }
+        _ => String::new(),
+    }
+}
+
 pub fn render(doc: &C4Document) -> String {
     let nodes: HashMap<&str, &Node> =
         doc.nodes.iter().map(|n| (n.uid.as_str(), n)).collect();
@@ -89,7 +108,7 @@ pub fn render(doc: &C4Document) -> String {
             continue;
         }
         let rels_str = build_relations_suffix(root.uid.as_str(), &doc.relations, &nodes);
-        out.push_str(&format!("{}: {}{}\n", display_type(&root.node_type), root.name, rels_str));
+        out.push_str(&format!("{}: {}{}{}\n", display_type(&root.node_type), root.name, role_suffix(root), rels_str));
         let empty = vec![];
         let children = children_map.get(root.uid.as_str()).unwrap_or(&empty);
         for (i, child_id) in children.iter().enumerate() {
@@ -123,11 +142,12 @@ fn render_node<'a>(
 
     let rels_str = build_relations_suffix(node.uid.as_str(), relations, nodes);
     out.push_str(&format!(
-        "{}{}{}: {}{}\n",
+        "{}{}{}: {}{}{}\n",
         prefix,
         connector,
         display_type(&node.node_type),
         node.name,
+        role_suffix(node),
         rels_str
     ));
 
@@ -166,6 +186,9 @@ fn display_type(t: &str) -> &str {
         "backend" => "Backend",
         "frontend" => "Frontend",
         "client" => "Client",
+        "person" => "Person",
+        "externalsystem" => "ExternalSystem",
+        "subsystem" => "Subsystem",
         "apicontainer" => "ApiContainer",
         "wscontainer" => "WsContainer",
         "datastore" => "DataStore",

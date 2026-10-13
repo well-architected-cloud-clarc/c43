@@ -16,6 +16,8 @@ pub enum ConstructKind {
     ApiContainer,
     /// Function or TBDFunction
     Function,
+    /// A person or a system outside the code, declared with `new Entity(scope, id, kind)`
+    Entity,
     /// Any other Construct (McpContainer, ...)
     Construct,
 }
@@ -27,6 +29,9 @@ impl ConstructKind {
     pub fn is_architecture(self) -> bool {
         self == ConstructKind::Architecture
     }
+    pub fn is_entity(self) -> bool {
+        self == ConstructKind::Entity
+    }
     pub fn as_str(self) -> &'static str {
         match self {
             ConstructKind::Unresolved => "unresolved",
@@ -34,9 +39,17 @@ impl ConstructKind {
             ConstructKind::Architecture => "architecture",
             ConstructKind::ApiContainer => "apicontainer",
             ConstructKind::Function => "function",
+            ConstructKind::Entity => "entity",
             ConstructKind::Construct => "construct",
         }
     }
+}
+
+/// A relation declared on a construct: `entity.uses(target, 'label')`
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeclaredUse {
+    pub target_var: String,
+    pub label: Option<String>,
 }
 
 /// A construct instantiation found in TS source
@@ -51,6 +64,10 @@ pub struct ConstructInstance {
     pub file: String,
     /// Variables used as objects in method calls within the handler body (function-bodied constructs)
     pub called_vars: Vec<String>,
+    /// Third constructor argument when it is a string literal (an `Entity`'s kind)
+    pub kind_arg: Option<String>,
+    /// `.uses(target, label?)` calls chained on the instantiation or made on its variable
+    pub uses: Vec<DeclaredUse>,
 }
 
 /// A class declaration: its base class and what its constructor creates.
@@ -167,6 +184,8 @@ pub struct FileExtracts {
     /// Re-exports: `export { x } from 'source'` or `export * from 'source'`
     pub reexports: Vec<ReExport>,
     pub classes: Vec<ClassInfo>,
+    /// `.uses(...)` calls made on a variable (`user.uses(web)`), applied to the construct in `extract_from_module`
+    pending_uses: Vec<(String, Vec<DeclaredUse>)>,
 }
 
 pub fn extract_from_file(path: &Path) -> FileExtracts {
@@ -187,6 +206,15 @@ pub fn extract_from_module(module: &Module, file: &str) -> FileExtracts {
             ModuleItem::Stmt(stmt) => extract_from_stmt(stmt, file, &mut result),
         }
     }
+
+    let pending = std::mem::take(&mut result.pending_uses);
+    pending.into_iter().for_each(|(var, uses)| {
+        result
+            .constructs
+            .iter_mut()
+            .filter(|c| c.var_name.as_deref() == Some(var.as_str()))
+            .for_each(|c| c.uses.extend(uses.iter().cloned()));
+    });
 
     result
 }
@@ -291,9 +319,53 @@ fn extract_from_stmt(stmt: &Stmt, file: &str, result: &mut FileExtracts) {
         Stmt::Decl(decl) => extract_from_decl_inner(decl, file, result),
         Stmt::Expr(expr_stmt) => {
             extract_bind_calls(&expr_stmt.expr, file, result);
+            extract_uses_statement(&expr_stmt.expr, file, result);
         }
         _ => {}
     }
+}
+
+/// `new Entity(...)` as a statement (with or without chained `.uses(...)`) declares an unnamed
+/// construct; `var.uses(...)` adds relations to the construct held in `var`.
+fn extract_uses_statement(expr: &Expr, file: &str, result: &mut FileExtracts) {
+    let (base, uses) = peel_uses_chain(expr);
+    match base {
+        Expr::Ident(id) if !uses.is_empty() => result.pending_uses.push((id.sym.to_string(), uses)),
+        Expr::New(_) => result.constructs.extend(
+            extract_new_expr(base, file)
+                .filter(|ci| !uses.is_empty() || ci.class_name == "Entity")
+                .map(|ci| ConstructInstance { uses, ..ci }),
+        ),
+        _ => {}
+    }
+}
+
+/// `base.uses(a, 'x').uses(b)` -> (base, [a 'x', b]) in call order
+fn peel_uses_chain(expr: &Expr) -> (&Expr, Vec<DeclaredUse>) {
+    match expr {
+        Expr::Call(call) => match uses_call(call) {
+            Some((obj, used)) => {
+                let (base, mut uses) = peel_uses_chain(obj);
+                uses.push(used);
+                (base, uses)
+            }
+            None => (expr, vec![]),
+        },
+        _ => (expr, vec![]),
+    }
+}
+
+/// `obj.uses(target, 'label')` -> (obj, the declared use)
+fn uses_call(call: &CallExpr) -> Option<(&Expr, DeclaredUse)> {
+    let Callee::Expr(callee) = &call.callee else { return None };
+    let Expr::Member(member) = callee.as_ref() else { return None };
+    let MemberProp::Ident(prop) = &member.prop else { return None };
+    if prop.sym.as_ref() != "uses" {
+        return None;
+    }
+    let target_var = call.args.first().and_then(|a| expr_to_ident_name(&a.expr))?;
+    let label = call.args.get(1).and_then(|a| expr_to_string(&a.expr));
+    Some((member.obj.as_ref(), DeclaredUse { target_var, label }))
 }
 
 fn extract_from_decl_inner(decl: &Decl, file: &str, result: &mut FileExtracts) {
@@ -302,10 +374,12 @@ fn extract_from_decl_inner(decl: &Decl, file: &str, result: &mut FileExtracts) {
             for declarator in &var_decl.decls {
                 let var_name = pat_to_name(&declarator.name);
                 if let Some(init) = &declarator.init {
-                    // Check for new expressions
-                    if let Some(ci) = extract_new_expr(init, file) {
+                    // Check for new expressions (optionally with chained `.uses(...)` calls)
+                    let (base, uses) = peel_uses_chain(init);
+                    if let Some(ci) = extract_new_expr(base, file) {
                         let mut ci = ci;
                         ci.var_name = var_name.clone();
+                        ci.uses = uses;
                         // Constructor route literal (ApiContainer and subclasses; kind checked later)
                         if let Some(routes) = extract_api_routes(init) {
                             if !routes.is_empty() {
@@ -443,6 +517,8 @@ fn extract_new_expr(expr: &Expr, file: &str) -> Option<ConstructInstance> {
             var_name: None,
             file: file.to_string(),
             called_vars: vec![],
+            kind_arg: None,
+            uses: vec![],
         });
     }
 
@@ -463,6 +539,8 @@ fn extract_new_expr(expr: &Expr, file: &str) -> Option<ConstructInstance> {
                 var_name: None,
                 file: file.to_string(),
                 called_vars,
+                kind_arg: args.get(2).and_then(|a| expr_to_string(&a.expr)),
+                uses: vec![],
             });
         }
     }

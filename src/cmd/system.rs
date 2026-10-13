@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use crate::analysis::{build_exported_constructs_map, find_consumers, scan_projects, ProjectData, VarResolver};
+use crate::analysis::{build_exported_constructs_map, find_consumers, is_external_scope, scan_projects, ProjectData, VarResolver};
 use crate::extract::ConstructInstance;
-use crate::model::{backend_uid, C4Document, NodeAttributes};
+use crate::model::{backend_uid, entity_uid, C4Document, NodeAttributes};
+use crate::roles;
 
 const WEB_FRAMEWORK_DEPS: &[&str] = &[
     "react", "vue", "svelte", "angular", "@angular/core",
@@ -44,7 +45,7 @@ pub fn run(root: &Path) -> C4Document {
         file: None,
         variable: None,
         kind: None,
-        role: None,
+        role: Some(roles::BOUNDARY.to_string()),
     });
 
     let project_data = scan_projects(&root);
@@ -61,8 +62,14 @@ pub fn run(root: &Path) -> C4Document {
     // Find which Architectures exist (for linking consumers to backends)
     let mut seen_architectures = HashSet::new();
     let mut arch_by_definer: HashMap<&str, Vec<String>> = HashMap::new();
+    // A frontend or client declaring an Architecture of its own is that one node, not a backend too
+    let consumer_pkgs: HashSet<&str> = packages
+        .iter()
+        .filter(|(_, role)| matches!(role, PackageRole::Frontend | PackageRole::Client))
+        .map(|(pd, _)| pd.name.as_str())
+        .collect();
     for pd in &project_data {
-        if is_test_pkg(&pd.name) { continue; }
+        if is_test_pkg(&pd.name) || consumer_pkgs.contains(pd.name.as_str()) { continue; }
         for c in &pd.constructs {
             if is_test_construct(c) { continue; }
             if c.kind.is_architecture() && seen_architectures.insert(c.id.clone()) {
@@ -73,7 +80,7 @@ pub fn run(root: &Path) -> C4Document {
                     file: Some(rel_file),
                     variable: c.var_name.clone(),
                     kind: Some(c.kind.as_str().to_string()),
-                    role: None,
+                    role: Some(roles::SERVICE.to_string()),
                 });
                 doc.add_relation(&system_name, "contains", &uid);
                 arch_by_definer.entry(&pd.name).or_default().push(uid);
@@ -87,13 +94,13 @@ pub fn run(root: &Path) -> C4Document {
     for (pd, role) in &packages {
         match role {
             PackageRole::Frontend | PackageRole::Client => {
-                let type_name = if *role == PackageRole::Frontend { "Frontend" } else { "Client" };
+                let (type_name, node_role) = if *role == PackageRole::Frontend { ("Frontend", roles::WEB) } else { ("Client", roles::CLIENT) };
                 doc.add_node(&pd.name, &pd.name, type_name, NodeAttributes {
                     project: Some(pd.name.clone()),
                     file: None,
                     variable: None,
                     kind: None,
-                    role: None,
+                    role: Some(node_role.to_string()),
                 });
                 doc.add_relation(&system_name, "contains", &pd.name);
 
@@ -139,7 +146,67 @@ pub fn run(root: &Path) -> C4Document {
         }
     }
 
+    add_entities(&mut doc, &system_name, &project_data, &resolver, &consumer_pkgs, &is_test_pkg, &is_test_construct, root_str);
+
     doc
+}
+
+/// Declared entities (people and systems around the solution) and what they use. An entity under
+/// `external` sits outside the repo group; any other is part of the system. Its relations are
+/// labelled with the declared label, `uses` when there is none.
+#[allow(clippy::too_many_arguments)]
+fn add_entities(
+    doc: &mut C4Document,
+    system_name: &str,
+    project_data: &[ProjectData],
+    resolver: &VarResolver,
+    consumer_pkgs: &HashSet<&str>,
+    is_test_pkg: &dyn Fn(&str) -> bool,
+    is_test_construct: &dyn Fn(&ConstructInstance) -> bool,
+    root_str: &str,
+) {
+    // Node an entity's target is drawn as: the package node of a frontend/client that declares
+    // the Architecture, else the Architecture owning the target (or the entity itself).
+    let node_of = |tpkg: &str, t: &ConstructInstance| -> Option<String> {
+        if t.kind.is_entity() {
+            return Some(entity_uid(t));
+        }
+        if t.kind.is_architecture() && consumer_pkgs.contains(tpkg) {
+            return Some(tpkg.to_string());
+        }
+        resolver.architecture_of(tpkg, t).map(|a| backend_uid(&a.id))
+    };
+    let entities: Vec<(&ProjectData, &ConstructInstance)> = project_data
+        .iter()
+        .filter(|pd| !is_test_pkg(&pd.name))
+        .flat_map(|pd| pd.constructs.iter().map(move |c| (pd, c)))
+        .filter(|(_, c)| c.kind.is_entity() && !is_test_construct(c))
+        .collect();
+    entities.iter().for_each(|(pd, c)| {
+        let external = c.scope_var.as_deref().is_some_and(|sv| is_external_scope(pd, sv));
+        let (node_type, role) = match (c.kind_arg.as_deref(), external) {
+            (Some("person"), _) => ("Person", roles::PERSON),
+            (_, true) => ("ExternalSystem", roles::EXTERNAL_SYSTEM),
+            (_, false) => ("Subsystem", roles::SYSTEM),
+        };
+        let uid = entity_uid(c);
+        doc.add_node(&uid, &c.id, node_type, NodeAttributes {
+            project: Some(pd.name.clone()),
+            file: Some(rel_path(&c.file, root_str)),
+            variable: c.var_name.clone(),
+            kind: Some(c.kind.as_str().to_string()),
+            role: Some(role.to_string()),
+        });
+        if !external {
+            doc.add_relation(system_name, "contains", &uid);
+        }
+        c.uses
+            .iter()
+            .filter_map(|u| resolver.resolve(&pd.name, &u.target_var).map(|(tpkg, t)| (u, tpkg, t)))
+            .filter_map(|(u, tpkg, t)| node_of(tpkg, t).map(|node| (u, node)))
+            .filter(|(_, node)| node != &uid)
+            .for_each(|(u, node)| doc.add_relation(&uid, u.label.as_deref().unwrap_or("uses"), &node));
+    });
 }
 
 /// Packages that consume architecture constructs (directly or transitively) and are
@@ -199,11 +266,32 @@ fn classify_packages(project_data: &[ProjectData]) -> Vec<(&ProjectData, Package
         for name in new_consumers { is_consumer.insert(name); }
     }
 
+    // An Architecture nothing is scoped under only names a frontend or client (it exists so that
+    // declared entities can use it); it does not make its package a backend.
+    let resolver = VarResolver::new(project_data);
+    let has_members = |arch: &ConstructInstance| {
+        project_data.iter().any(|other| {
+            other.constructs.iter().any(|c| {
+                !c.kind.is_architecture()
+                    && !c.kind.is_entity()
+                    && c.scope_var
+                        .as_deref()
+                        .and_then(|sv| resolver.resolve(&other.name, sv))
+                        .is_some_and(|(_, parent)| std::ptr::eq(parent, arch))
+            })
+        })
+    };
+    let declaration_only = |pd: &ProjectData| {
+        let mut archs = pd.constructs.iter().filter(|c| c.kind.is_architecture()).peekable();
+        archs.peek().is_some() && archs.all(|a| !has_members(a))
+    };
+
     project_data
         .iter()
         .map(|pd| {
             let consumer = is_consumer.contains(pd.name.as_str());
-            (pd, consumer, classify_package(pd, !pd.binds.is_empty(), consumer, &imported_packages))
+            let names_consumer = consumer && declaration_only(pd);
+            (pd, consumer, classify_package(pd, !pd.binds.is_empty(), consumer, names_consumer, &imported_packages))
         })
         .filter(|(pd, consumer, role)| {
             *role == PackageRole::TestPackage
@@ -264,6 +352,7 @@ fn classify_package(
     pd: &ProjectData,
     has_binds: bool,
     is_consumer: bool,
+    names_consumer: bool,
     imported_packages: &HashSet<&str>,
 ) -> PackageRole {
     let name_lower = pd.name.to_lowercase();
@@ -283,7 +372,7 @@ fn classify_package(
     }
 
     // 2. Architecture definer
-    if pd.constructs.iter().any(|c| c.kind.is_architecture()) {
+    if !names_consumer && pd.constructs.iter().any(|c| c.kind.is_architecture()) {
         return PackageRole::ArchDefiner;
     }
 

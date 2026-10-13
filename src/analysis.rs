@@ -368,11 +368,22 @@ const CDK_ARCH_PACKAGES: &[&str] = &["@arinoto/cdk-arch"];
 
 const MAX_CLASS_DEPTH: usize = 16;
 
+/// Whether `scope_var`, as seen from package `pd`, is cdk-arch's `external` marker architecture
+/// (imported from cdk-arch, possibly under another local name).
+pub fn is_external_scope(pd: &ProjectData, scope_var: &str) -> bool {
+    pd.imports.iter().any(|i| {
+        i.local_name == scope_var
+            && CDK_ARCH_PACKAGES.contains(&i.source.as_str())
+            && i.imported_name.as_deref().unwrap_or(&i.local_name) == "external"
+    })
+}
+
 fn base_kind(name: &str) -> ConstructKind {
     match name {
         "Architecture" => ConstructKind::Architecture,
         "ApiContainer" => ConstructKind::ApiContainer,
         "Function" | "TBDFunction" => ConstructKind::Function,
+        "Entity" => ConstructKind::Entity,
         _ => ConstructKind::Construct,
     }
 }
@@ -459,6 +470,11 @@ pub fn resolve_construct_kinds(projects: &mut [ProjectData]) {
             projects: projects.iter().map(|pd| (pd.name.as_str(), pd)).collect(),
         };
         for pd in projects.iter() {
+            // the library defining the base classes (and `external`) is not part of the solution
+            if CDK_ARCH_PACKAGES.contains(&pd.name.as_str()) {
+                resolved.push((Vec::new(), Vec::new()));
+                continue;
+            }
             let mut constructs = Vec::new();
             let mut routes = Vec::new();
             // (construct, package its class name is resolved in)

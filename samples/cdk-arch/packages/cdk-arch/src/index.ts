@@ -5,3 +5,4 @@ export { ApiContainer, ApiRoutes, RouteEntry, HandlerOf, RouteHandlers } from '.
 export { ArchitectureBinding, ServiceEndpoint, architectureBinding } from './binding';
 export { httpHandler, createHttpBindings, Fetcher } from './http-handler';
 export { RuntimeContext, getCurrentContext, runWithContext } from './context';
+export { Entity, EntityKind, EntityUsage, external } from './entity';

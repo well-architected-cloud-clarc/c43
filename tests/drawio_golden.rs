@@ -67,27 +67,20 @@ fn rebob_container() {
     golden("rebob-container")
 }
 
-/// synthetic, from the ticket's mermaid: richer than what c43 generates (explicit roles, a boundary group, labelled relations)
-#[test]
-fn hello_world_mermaid() {
-    golden("hello-world-mermaid");
-    let x = drawn("hello-world-mermaid");
-    assert!(x.contains("[ enterprise boundary ]") && x.contains("[ software") && x.contains("[ database ]"));
-    assert!(x.contains("value=\"says&#xa;hello\"") && x.contains("value=\"persists&#xa;hellos\""));
-}
-
 #[test]
 fn hello_c43_system() {
     golden("hello-c43-system")
 }
 
-/// real dumps carry the look: icons from the hints, the role is the type
+/// real dumps carry the look: roles from the output, icons from the roles (and the hints)
 #[test]
 fn real_dumps_show_icons_and_roles() {
     let x = drawn("rebob-container");
     ["i-@bob/frontend", "i-queue/task-queue", "i-memory/graph"].iter().for_each(|id| assert!(x.contains(&format!("id=\"{id}\"")), "{id}"));
-    assert!(x.contains("[ apicontainer ]"));
-    assert!(drawn("hello-c43-system").contains("[ frontend ]"));
+    assert!(x.contains("[ api ]") && x.contains("[ database ]") && x.contains("[ event bus ]"));
+    // the declared person, outside the repo group, with its icon from the role and the declared relation label
+    let hello = drawn("hello-c43-system");
+    ["[ person ]", "[ web ]", "[ service ]", "[ boundary ]", "i-person:user", "value=\"says&#xa;hello\""].iter().for_each(|t| assert!(hello.contains(t), "{t}"));
 }
 
 fn graph(v: serde_json::Value) -> InputGraph {
