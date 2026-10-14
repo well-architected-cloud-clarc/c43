@@ -68,7 +68,7 @@ A person or a system outside the analysed code cannot be derived from imports, s
 - **Strokes.** Nodes 2, frames (the outer diagram border and group frames) 1, connections 0.5: the 4:2:1 ratio, with groups now in the frame class so they differ from connections. Rejected: thinner connections (arrowheads shrink with the stroke, lines vanish in small PNGs), dashed or grey group frames.
 - **Ascii.** An entity is a root line (`Person: user [says hello: web-app]`). A role is appended in parentheses only when the type does not already say it: never for the system-level types, `container`, `function` or `api`; so `JsonStore: things (database)`, `TaskQueue: jobs (event bus)`.
 - **Fixtures.** The synthetic `hello-world-mermaid` case is gone. `hello-c43-system` is the real output of the sample (`samples/cdk-arch/packages/example`, which now declares its user in `web/src/architecture.ts`), `rebob-*` dumps were regenerated (same nodes, now with roles). The `hello-c43-system` hints are empty: its icons come from roles.
-- **Done on the cdk-arch side:** `external`, `Entity`, `Entity.uses` and version 0.8.0 (cdk-arch repo, branch `jet9f-entities`, not published). Consumers (rebob, reveal-interact) adopt in their own tasks; until then they get roles but no persons.
+- **Done on the cdk-arch side:** `external`, `Entity`, `Entity.uses`, published as `@arinoto/cdk-arch` 0.8.0 (cdk-arch repo). Consumers (rebob, reveal-interact) adopt in their own tasks; until then they get roles but no persons.
 
 ### Outcome against the scope above
 How each item of the original ticket and of the f8ew1 scope ends up under this specification:
@@ -79,7 +79,7 @@ How each item of the original ticket and of the f8ew1 scope ends up under this s
 - Relation descriptions as labels: delivered for declared relations only (`Entity.uses(target, label)`); derived relations keep `uses`. "persists hellos" on api → store is not expressible yet (Open).
 - Icons from the output instead of per-case hints: delivered for roles that map to icons (person, database, object store, event bus). Not yet for whole Architectures that behave as a store or bus (rebob: queue, memory, event-storage) nor for frontends and clients without a declared person; those keep their hints.
 - The synthetic fixture replaced by real output: delivered (the sample declares its user).
-- Adopted by consumers: not yet. rebob and reveal-interact get roles but no persons until their frontends and clients declare one (own tasks); the cdk-arch change (`external`, `Entity`, `uses`, 0.8.0) is built and tested but not merged or published, and the c43 side awaits the pinned layout-engine revision.
+- Adopted by consumers: not part of this task. rebob and reveal-interact get roles but no persons until their frontends and clients declare one (own tasks, 0.8.0 of the cdk-arch package is published and c43 is pinned to the layout-engine revision with the new hints).
 
 Rendering work that this task pulled in, recorded in the decisions above: sources lean left only when they are users (`pull_sources`), straight connections by port snapping, group frames at the frame weight, placement hints in the per-case hints file.
 
