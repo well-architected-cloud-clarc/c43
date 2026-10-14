@@ -49,10 +49,11 @@ pub fn render(doc: &C4Document) -> Result<Rendered, String> {
     render_with_hints(doc, &PrettyHints::default())
 }
 
-/// as `render`, with the icons of nodes given
+/// as `render`, with the icons of nodes and placement suggestions given
 pub fn render_with_hints(doc: &C4Document, hints: &PrettyHints) -> Result<Rendered, String> {
     let mut built = graph::build(doc);
     hints.icons.iter().for_each(|(id, icon)| built.meta.entry(id.clone()).or_default().icon = Some(*icon));
+    built.hints.placement.extend(hints.placement.iter().cloned());
     let mut warnings = built.warnings;
     let g = &built.graph;
     if g.nodes.is_empty() {

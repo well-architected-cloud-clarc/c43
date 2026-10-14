@@ -62,6 +62,26 @@ fn rebob_system() {
     golden("rebob-system")
 }
 
+/// placement hints reach the layout: the hints file asks for the consolidator above memory, and the opposite hint flips them
+#[test]
+fn rebob_system_placement_hints_order_the_rows() {
+    let top = |xml: &str, id: &str| -> f64 {
+        let line = xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap_or_else(|| panic!("no node {id}"));
+        line.split(" y=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    let with = |hints: &str| {
+        let hints: PrettyHints = serde_json::from_str(hints).unwrap();
+        render_with_hints(&doc_from_json(&serde_json::from_str(&case("rebob-system", "c43.json")).unwrap()), &hints).unwrap().xml
+    };
+    let above = with(r#"{"placement":[{"rel":"above","a":"backend:consolidator","b":"backend:memory"}]}"#);
+    let below = with(r#"{"placement":[{"rel":"below","a":"backend:consolidator","b":"backend:memory"}]}"#);
+    assert!(top(&above, "backend:consolidator") < top(&above, "backend:memory"));
+    assert!(top(&below, "backend:consolidator") > top(&below, "backend:memory"));
+    // and the case's own hints file asks for the first
+    let own = drawn("rebob-system");
+    assert!(top(&own, "backend:consolidator") < top(&own, "backend:memory"));
+}
+
 #[test]
 fn rebob_container() {
     golden("rebob-container")

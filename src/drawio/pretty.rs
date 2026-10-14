@@ -4,7 +4,7 @@ use super::fonts::{self, NAME_FACE, REGULAR_FACE};
 use crate::roles;
 use c43_layout::drawio::text::{text_width_in, wrap_in, Face, LABEL_PX, LINE_H, PAD};
 use c43_layout::js::num;
-use c43_layout::model::Kind;
+use c43_layout::model::{Kind, PlacementHint};
 use indexmap::IndexMap;
 use serde::Deserialize;
 
@@ -41,11 +41,14 @@ impl Icon {
     }
 }
 
-/// per-case hints for the look, from a hints file: icons by node id, overriding the ones roles give
+/// per-case hints, from a hints file: icons by node id, overriding the ones roles give, and
+/// placement suggestions for the layout (`a` above `b`, ...; ids are node uids)
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PrettyHints {
     #[serde(default)]
     pub icons: IndexMap<String, Icon>,
+    #[serde(default)]
+    pub placement: Vec<PlacementHint>,
 }
 
 /// what the look needs to know about a node or a group besides its name
