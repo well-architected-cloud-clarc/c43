@@ -11,6 +11,7 @@ use serde::Deserialize;
 /// connection line width in px; a node outline is 4x, the outer diagram border 2x
 pub const LINE: f64 = 0.5;
 pub const NODE_STROKE: f64 = 4.0 * LINE;
+/// the outer diagram border and group frames: one "frame" weight, twice a connection so that connections stay distinct
 pub const FRAME_STROKE: f64 = 2.0 * LINE;
 /// an edge label wider than this is split into lines: about the width of the lane an edge runs in between two nodes
 pub const EDGE_LABEL_PX: f64 = 48.0;
@@ -148,7 +149,7 @@ pub fn pretty_styler(meta: &IndexMap<String, Meta>) -> Styler<'_> {
             let gid = format!("gg-{id}");
             let top = (t.y + t.h) * u - lines.len() as f64 * LABEL_PX * LINE_H;
             std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, g.w * u, g.h * u))
-                .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(LINE)), 0.0, 0.0, g.w * u, g.h * u)))
+                .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(FRAME_STROKE)), 0.0, 0.0, g.w * u, g.h * u)))
                 .chain(text_cells((&format!("gt-{id}"), &format!("gr-{id}")), &gid, &lines, "left", t.x * u, top, t.w * u, (gx, gy)))
                 .collect()
         }),

@@ -82,6 +82,36 @@ fn rebob_system_placement_hints_order_the_rows() {
     assert!(top(&own, "backend:consolidator") < top(&own, "backend:memory"));
 }
 
+/// with user nodes (the user icon) only those lean to the left; the other sources sit before what they use
+#[test]
+fn rebob_system_only_user_nodes_lean_left() {
+    let x = |xml: &str, id: &str| -> f64 {
+        let line = xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap_or_else(|| panic!("no node {id}"));
+        line.split(" x=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    let xml = drawn("rebob-system");
+    let left = x(&xml, "@bob/frontend").min(x(&xml, "@bob/sub-bob-bootstrap"));
+    assert_eq!(x(&xml, "@bob/frontend"), x(&xml, "@bob/sub-bob-bootstrap"));
+    ["backend:consolidator", "backend:dispatcher"].iter().for_each(|id| assert!(x(&xml, id) > left, "{id} is not at the far left"));
+    // and right before what it uses, not further left than memory's own predecessors
+    assert!(x(&xml, "backend:consolidator") < x(&xml, "backend:memory"));
+}
+
+#[test]
+fn few_sources_and_no_users_keep_the_default_layout() {
+    // two sources, none a user: nothing is pulled, so the second source stays in the first column
+    let doc = doc_from_json(&json!({
+        "nodes": [{"uid":"a","name":"a","type":"backend","attributes":{}},{"uid":"x","name":"x","type":"backend","attributes":{}},
+                  {"uid":"b","name":"b","type":"backend","attributes":{}},{"uid":"c","name":"c","type":"backend","attributes":{}}],
+        "relations": [{"start":"a","is":"uses","end":"b"},{"start":"b","is":"uses","end":"c"},{"start":"x","is":"uses","end":"c"}]
+    }));
+    let xml = render(&doc).unwrap().xml;
+    let x = |id: &str| -> f64 {
+        xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap().split(" x=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    assert_eq!(x("x"), x("a"));
+}
+
 #[test]
 fn rebob_container() {
     golden("rebob-container")

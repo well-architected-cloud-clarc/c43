@@ -71,7 +71,8 @@ fn strokes_are_4_2_1() {
     let x = xml();
     assert_eq!(style_num(cell(&x, "n-api"), "strokeWidth"), 2.0);
     assert_eq!(style_num(cell(&x, "frame"), "strokeWidth"), 1.0);
-    assert_eq!(style_num(cell(&x, "g-g"), "strokeWidth"), 0.5);
+    // group frames weigh like the outer border, twice a connection
+    assert_eq!(style_num(cell(&x, "g-g"), "strokeWidth"), 1.0);
     let edge = x.lines().find(|l| l.contains("edge=\"1\"")).unwrap();
     assert_eq!(style_num(edge, "strokeWidth"), 0.5);
 }
