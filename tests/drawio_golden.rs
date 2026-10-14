@@ -62,18 +62,59 @@ fn rebob_system() {
     golden("rebob-system")
 }
 
+/// placement hints reach the layout: the hints file asks for the consolidator above memory, and the opposite hint flips them
+#[test]
+fn rebob_system_placement_hints_order_the_rows() {
+    let top = |xml: &str, id: &str| -> f64 {
+        let line = xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap_or_else(|| panic!("no node {id}"));
+        line.split(" y=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    let with = |hints: &str| {
+        let hints: PrettyHints = serde_json::from_str(hints).unwrap();
+        render_with_hints(&doc_from_json(&serde_json::from_str(&case("rebob-system", "c43.json")).unwrap()), &hints).unwrap().xml
+    };
+    let above = with(r#"{"placement":[{"rel":"above","a":"backend:consolidator","b":"backend:memory"}]}"#);
+    let below = with(r#"{"placement":[{"rel":"below","a":"backend:consolidator","b":"backend:memory"}]}"#);
+    assert!(top(&above, "backend:consolidator") < top(&above, "backend:memory"));
+    assert!(top(&below, "backend:consolidator") > top(&below, "backend:memory"));
+    // and the case's own hints file asks for the first
+    let own = drawn("rebob-system");
+    assert!(top(&own, "backend:consolidator") < top(&own, "backend:memory"));
+}
+
+/// with user nodes (the user icon) only those lean to the left; the other sources sit before what they use
+#[test]
+fn rebob_system_only_user_nodes_lean_left() {
+    let x = |xml: &str, id: &str| -> f64 {
+        let line = xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap_or_else(|| panic!("no node {id}"));
+        line.split(" x=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    let xml = drawn("rebob-system");
+    let left = x(&xml, "@bob/frontend").min(x(&xml, "@bob/sub-bob-bootstrap"));
+    assert_eq!(x(&xml, "@bob/frontend"), x(&xml, "@bob/sub-bob-bootstrap"));
+    ["backend:consolidator", "backend:dispatcher"].iter().for_each(|id| assert!(x(&xml, id) > left, "{id} is not at the far left"));
+    // and right before what it uses, not further left than memory's own predecessors
+    assert!(x(&xml, "backend:consolidator") < x(&xml, "backend:memory"));
+}
+
+#[test]
+fn few_sources_and_no_users_keep_the_default_layout() {
+    // two sources, none a user: nothing is pulled, so the second source stays in the first column
+    let doc = doc_from_json(&json!({
+        "nodes": [{"uid":"a","name":"a","type":"backend","attributes":{}},{"uid":"x","name":"x","type":"backend","attributes":{}},
+                  {"uid":"b","name":"b","type":"backend","attributes":{}},{"uid":"c","name":"c","type":"backend","attributes":{}}],
+        "relations": [{"start":"a","is":"uses","end":"b"},{"start":"b","is":"uses","end":"c"},{"start":"x","is":"uses","end":"c"}]
+    }));
+    let xml = render(&doc).unwrap().xml;
+    let x = |id: &str| -> f64 {
+        xml.lines().find(|l| l.contains(&format!("<mxCell id=\"ng-{id}\""))).unwrap().split(" x=\"").nth(1).unwrap().split('"').next().unwrap().parse().unwrap()
+    };
+    assert_eq!(x("x"), x("a"));
+}
+
 #[test]
 fn rebob_container() {
     golden("rebob-container")
-}
-
-/// synthetic, from the ticket's mermaid: richer than what c43 generates (explicit roles, a boundary group, labelled relations)
-#[test]
-fn hello_world_mermaid() {
-    golden("hello-world-mermaid");
-    let x = drawn("hello-world-mermaid");
-    assert!(x.contains("[ enterprise boundary ]") && x.contains("[ software") && x.contains("[ database ]"));
-    assert!(x.contains("value=\"says&#xa;hello\"") && x.contains("value=\"persists&#xa;hellos\""));
 }
 
 #[test]
@@ -81,13 +122,15 @@ fn hello_c43_system() {
     golden("hello-c43-system")
 }
 
-/// real dumps carry the look: icons from the hints, the role is the type
+/// real dumps carry the look: roles from the output, icons from the roles (and the hints)
 #[test]
 fn real_dumps_show_icons_and_roles() {
     let x = drawn("rebob-container");
     ["i-@bob/frontend", "i-queue/task-queue", "i-memory/graph"].iter().for_each(|id| assert!(x.contains(&format!("id=\"{id}\"")), "{id}"));
-    assert!(x.contains("[ apicontainer ]"));
-    assert!(drawn("hello-c43-system").contains("[ frontend ]"));
+    assert!(x.contains("[ api ]") && x.contains("[ database ]") && x.contains("[ event bus ]"));
+    // the declared person, outside the repo group, with its icon from the role and the declared relation label
+    let hello = drawn("hello-c43-system");
+    ["[ person ]", "[ web ]", "[ service ]", "[ boundary ]", "i-person:user", "value=\"says&#xa;hello\""].iter().for_each(|t| assert!(hello.contains(t), "{t}"));
 }
 
 fn graph(v: serde_json::Value) -> InputGraph {

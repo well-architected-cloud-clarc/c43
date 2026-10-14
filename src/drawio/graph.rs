@@ -1,5 +1,5 @@
 //! C4 document → layout graph and hints.
-use super::pretty::{group_text_width, node_side, Meta};
+use super::pretty::{group_text_width, node_side, Icon, Meta};
 use super::fonts::REGULAR_FACE;
 use super::pretty::EDGE_LABEL_PX;
 use c43_layout::drawio::text::{edge_label_lines_in, LABEL_PX, LINE_H, UNIT_PX};
@@ -36,7 +36,15 @@ pub fn doc_from_json(v: &serde_json::Value) -> C4Document {
 /// any other relation an edge labelled with its kind (labels shown only when there is more than one kind)
 pub fn build(doc: &C4Document) -> Built {
     let mut warnings: Vec<String> = Vec::new();
-    let systems: IndexSet<&str> = doc.nodes.iter().filter(|n| n.node_type == "system").map(|n| n.uid.as_str()).collect();
+    let system_nodes: IndexSet<&str> = doc.nodes.iter().filter(|n| n.node_type == "system").map(|n| n.uid.as_str()).collect();
+    // what the system contains, directly or not; anything else (a declared person, an external system) sits outside it
+    let mut inside: IndexSet<&str> = system_nodes.clone();
+    while let Some(r) = doc.relations.iter().find(|r| r.is == "contains" && inside.contains(r.start.as_str()) && !inside.contains(r.end.as_str())) {
+        inside.insert(r.end.as_str());
+    }
+    let has_outsiders = doc.nodes.iter().any(|n| !inside.contains(n.uid.as_str()));
+    // the system is the title; with something outside it, it is also the boundary group around what is inside
+    let systems: IndexSet<&str> = if has_outsiders { IndexSet::new() } else { system_nodes };
     let title = doc.nodes.iter().find(|n| n.node_type == "system").map(|n| n.name.clone());
     let known: IndexSet<&str> = doc.nodes.iter().map(|n| n.uid.as_str()).collect();
     let contains: Vec<_> = doc.relations.iter().filter(|r| r.is == "contains" && !systems.contains(r.start.as_str())).collect();
@@ -120,8 +128,12 @@ pub fn build(doc: &C4Document) -> Built {
     let meta: IndexMap<String, Meta> = doc
         .nodes
         .iter()
-        // a node's role is its type until the c43 output carries roles; groups only have a role when given one
-        .map(|n| (n.uid.clone(), Meta { role: n.attributes.role.clone().or_else(|| (!group_ids.contains(n.uid.as_str())).then(|| n.node_type.clone())), icon: None }))
+        // a node's role is read from the output (its type when an older output has none); icons follow the role
+        .map(|n| {
+            let role = n.attributes.role.clone().or_else(|| (!group_ids.contains(n.uid.as_str())).then(|| n.node_type.clone()));
+            let icon = role.as_deref().and_then(Icon::of_role);
+            (n.uid.clone(), Meta { role, icon })
+        })
         .collect();
     let role = |id: &str| meta.get(id).and_then(|m| m.role.as_deref());
     let sizes = SizeHints {
@@ -133,7 +145,7 @@ pub fn build(doc: &C4Document) -> Built {
     };
     Built {
         graph: InputGraph { title, description: None, groups, nodes, edges },
-        hints: Hints { kinds: vec![], placement: vec![], sizes, gravity: false },
+        hints: Hints { kinds: vec![], placement: vec![], sizes, gravity: false, pull_sources: false },
         warnings,
         meta,
     }

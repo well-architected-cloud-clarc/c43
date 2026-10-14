@@ -1,15 +1,17 @@
 //! The Pretty C4 look: outlined square nodes with centered name/role text, icons sitting on the node's top-left corner, barrels for data stores.
 use c43_layout::drawio::export::{esc, vertex_in, EdgeDraw, Styler};
 use super::fonts::{self, NAME_FACE, REGULAR_FACE};
+use crate::roles;
 use c43_layout::drawio::text::{text_width_in, wrap_in, Face, LABEL_PX, LINE_H, PAD};
 use c43_layout::js::num;
-use c43_layout::model::Kind;
+use c43_layout::model::{Kind, PlacementHint};
 use indexmap::IndexMap;
 use serde::Deserialize;
 
 /// connection line width in px; a node outline is 4x, the outer diagram border 2x
 pub const LINE: f64 = 0.5;
 pub const NODE_STROKE: f64 = 4.0 * LINE;
+/// the outer diagram border and group frames: one "frame" weight, twice a connection so that connections stay distinct
 pub const FRAME_STROKE: f64 = 2.0 * LINE;
 /// an edge label wider than this is split into lines: about the width of the lane an edge runs in between two nodes
 pub const EDGE_LABEL_PX: f64 = 48.0;
@@ -27,11 +29,27 @@ pub enum Icon {
     Bus,
 }
 
-/// per-case hints for the look, from a hints file: the icon of nodes by id (until the c43 output carries it)
+impl Icon {
+    /// the icon a role is drawn with, if it has one
+    pub fn of_role(role: &str) -> Option<Icon> {
+        match role {
+            roles::PERSON => Some(Icon::User),
+            roles::DATABASE => Some(Icon::Db),
+            roles::OBJECT_STORE => Some(Icon::Store),
+            roles::EVENT_BUS => Some(Icon::Bus),
+            _ => None,
+        }
+    }
+}
+
+/// per-case hints, from a hints file: icons by node id, overriding the ones roles give, and
+/// placement suggestions for the layout (`a` above `b`, ...; ids are node uids)
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PrettyHints {
     #[serde(default)]
     pub icons: IndexMap<String, Icon>,
+    #[serde(default)]
+    pub placement: Vec<PlacementHint>,
 }
 
 /// what the look needs to know about a node or a group besides its name
@@ -131,7 +149,7 @@ pub fn pretty_styler(meta: &IndexMap<String, Meta>) -> Styler<'_> {
             let gid = format!("gg-{id}");
             let top = (t.y + t.h) * u - lines.len() as f64 * LABEL_PX * LINE_H;
             std::iter::once(vertex_in(&gid, "1", "", "group;", gx, gy, g.w * u, g.h * u))
-                .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(LINE)), 0.0, 0.0, g.w * u, g.h * u)))
+                .chain(std::iter::once(vertex_in(&format!("g-{id}"), &gid, "", &format!("rounded=0;fillColor=none;strokeWidth={};", num(FRAME_STROKE)), 0.0, 0.0, g.w * u, g.h * u)))
                 .chain(text_cells((&format!("gt-{id}"), &format!("gr-{id}")), &gid, &lines, "left", t.x * u, top, t.w * u, (gx, gy)))
                 .collect()
         }),

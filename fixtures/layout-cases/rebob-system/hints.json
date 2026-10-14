@@ -5,5 +5,12 @@
     "backend:event-storage": "db",
     "@bob/frontend": "user",
     "@bob/sub-bob-bootstrap": "user"
-  }
+  },
+  "placement": [
+    {
+      "rel": "above",
+      "a": "backend:consolidator",
+      "b": "backend:memory"
+    }
+  ]
 }

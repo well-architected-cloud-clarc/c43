@@ -60,6 +60,12 @@ pub fn backend_uid(arch_id: &str) -> String {
     format!("backend:{}", arch_id)
 }
 
+/// Uid of a declared entity (a person or a system around the solution), prefixed by what it is
+/// so it never shares a uid with a package or an Architecture of the same name.
+pub fn entity_uid(c: &crate::extract::ConstructInstance) -> String {
+    format!("{}:{}", if c.kind_arg.as_deref() == Some("person") { "person" } else { "system-entity" }, c.id)
+}
+
 /// Uid of a construct owned by an Architecture (container, function): `<arch id>/<id>`.
 /// Construct ids are only unique within their Architecture.
 pub fn child_uid(arch_id: &str, id: &str) -> String {

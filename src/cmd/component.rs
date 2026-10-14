@@ -5,6 +5,7 @@ use crate::analysis::{scan_projects, VarResolver};
 use crate::cmd::system::frontend_and_client_packages;
 use crate::extract::{ConstructInstance, RouteEntry};
 use crate::model::{backend_uid, child_uid, C4Document, NodeAttributes};
+use crate::roles;
 
 pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
     let mut doc = C4Document::new();
@@ -177,7 +178,7 @@ pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
         file: None,
         variable: None,
         kind: None,
-        role: None,
+        role: Some(roles::BOUNDARY.to_string()),
     });
 
     let mut emitted_uids: HashSet<String> = HashSet::new();
@@ -192,7 +193,7 @@ pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
             file: Some(rel_file),
             variable: arch.var_name.clone(),
             kind: Some(arch.kind.as_str().to_string()),
-            role: None,
+            role: Some(roles::SERVICE.to_string()),
         });
         doc.add_relation(&system_uid, "contains", &arch_uid);
         emitted_uids.insert(arch_uid.clone());
@@ -205,7 +206,7 @@ pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
                     file: Some(rel_file),
                     variable: child.var_name.clone(),
                     kind: Some(child.kind.as_str().to_string()),
-                    role: None,
+                    role: Some(roles::container_role(child.kind, &child.class_name).to_string()),
                 });
                 doc.add_relation(&arch_uid, "contains", child_uid);
                 emitted_uids.insert(child_uid.clone());
@@ -221,7 +222,7 @@ pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
             file: Some(rel_file),
             variable: ci.var_name.clone(),
             kind: Some(ci.kind.as_str().to_string()),
-            role: None,
+            role: Some(roles::FUNCTION.to_string()),
         });
         emitted_uids.insert(uid.clone());
     }
@@ -271,7 +272,7 @@ pub fn run(root: &Path, container_filter: Option<&str>) -> C4Document {
             file: None,
             variable: None,
             kind: None,
-            role: None,
+            role: Some((if type_name == "Frontend" { roles::WEB } else { roles::CLIENT }).to_string()),
         });
         doc.add_relation(&system_uid, "contains", &pd.name);
         for target in &targets {

@@ -5,4 +5,5 @@ pub mod drawio;
 pub mod extract;
 pub mod model;
 pub mod parse;
+pub mod roles;
 pub mod scan;

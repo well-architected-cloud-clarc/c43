@@ -29,6 +29,22 @@ pub fn render_pretty(l: &Layout, title: Option<&str>, description: Option<&str>,
     render_fonts(l, title, description, pretty::pretty_styler(meta), &frame_style, Some(&fonts::fonts()))
 }
 
+/// Sources (nodes nothing points at) tend to the left of the diagram, where the story starts. With
+/// user nodes (a person, or a node drawn with the user icon) only those lean left; with more than two
+/// sources and no user nodes none do: the rest sit just before what they use, so a service that only
+/// uses others is not pushed to the edge. Otherwise the layout is the default one.
+fn lean_sources(built: &mut graph::Built) {
+    let targets: std::collections::HashSet<&str> = built.graph.edges.iter().map(|e| e.to.as_str()).collect();
+    let sources: Vec<&str> = built.graph.nodes.iter().map(|n| n.id.as_str()).filter(|id| !targets.contains(id)).collect();
+    let is_user = |id: &str| built.meta.get(id).is_some_and(|m| m.icon == Some(pretty::Icon::User) || m.role.as_deref() == Some(crate::roles::PERSON));
+    let users: Vec<String> = sources.iter().filter(|id| is_user(id)).map(|id| id.to_string()).collect();
+    if users.is_empty() && sources.len() <= 2 {
+        return;
+    }
+    built.hints.pull_sources = true;
+    built.hints.placement.extend(users.into_iter().map(|a| c43_layout::model::PlacementHint { rel: c43_layout::model::Rel::Leftmost, a, b: None, priority: false }));
+}
+
 /// an empty grid: only the frame (and the title above it) is drawn
 fn empty_layout() -> Layout {
     Layout {
@@ -49,10 +65,12 @@ pub fn render(doc: &C4Document) -> Result<Rendered, String> {
     render_with_hints(doc, &PrettyHints::default())
 }
 
-/// as `render`, with the icons of nodes given
+/// as `render`, with the icons of nodes and placement suggestions given
 pub fn render_with_hints(doc: &C4Document, hints: &PrettyHints) -> Result<Rendered, String> {
     let mut built = graph::build(doc);
     hints.icons.iter().for_each(|(id, icon)| built.meta.entry(id.clone()).or_default().icon = Some(*icon));
+    built.hints.placement.extend(hints.placement.iter().cloned());
+    lean_sources(&mut built);
     let mut warnings = built.warnings;
     let g = &built.graph;
     if g.nodes.is_empty() {

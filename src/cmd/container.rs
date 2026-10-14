@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::analysis::{scan_projects, VarResolver};
 use crate::extract::{ConstructInstance, RouteEntry};
 use crate::model::{backend_uid, child_uid, C4Document, NodeAttributes};
+use crate::roles;
 
 pub fn run(root: &Path) -> C4Document {
     // Start with the full system-level document (Backend, Frontend, Client nodes + relations)
@@ -46,7 +47,7 @@ pub fn run(root: &Path) -> C4Document {
             file: Some(rel_path(&c.file, root_str)),
             variable: c.var_name.clone(),
             kind: Some(c.kind.as_str().to_string()),
-            role: None,
+            role: Some(roles::container_role(c.kind, &c.class_name).to_string()),
         });
         doc.add_relation(&backend_uid(&arch.id), "contains", uid);
     }

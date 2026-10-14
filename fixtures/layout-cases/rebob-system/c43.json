@@ -4,7 +4,9 @@
       "uid": "system:rebob",
       "name": "rebob",
       "type": "system",
-      "attributes": {}
+      "attributes": {
+        "role": "boundary"
+      }
     },
     {
       "uid": "backend:dispatcher",
@@ -14,7 +16,8 @@
         "project": "@bob/dispatcher-arch",
         "file": "packages/dispatcher/arch/src/architecture.ts",
         "variable": "dispatcherArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -25,7 +28,8 @@
         "project": "@bob/chat-arch",
         "file": "packages/chat/arch/src/architecture.ts",
         "variable": "chatArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -36,7 +40,8 @@
         "project": "@bob/queue-arch",
         "file": "packages/queue/arch/src/index.ts",
         "variable": "queueArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -47,7 +52,8 @@
         "project": "@bob/memory-arch",
         "file": "packages/memory/arch/src/architecture.ts",
         "variable": "memoryArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -58,7 +64,8 @@
         "project": "@bob/event-storage-arch",
         "file": "packages/event-storage/arch/src/architecture.ts",
         "variable": "eventStorageArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -69,7 +76,8 @@
         "project": "@bob/sub-bob-arch",
         "file": "packages/sub-bob/arch/src/architecture.ts",
         "variable": "subBobArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -80,7 +88,8 @@
         "project": "@bob/memory-consolidator-arch",
         "file": "packages/consolidator/arch/src/architecture.ts",
         "variable": "consolidatorArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -91,7 +100,8 @@
         "project": "@bob/llm-arch",
         "file": "packages/llm/arch/src/architecture.ts",
         "variable": "llmArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -102,7 +112,8 @@
         "project": "@bob/llm-server-docker",
         "file": "packages/llm/server-docker/src/architecture.ts",
         "variable": "llmArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -113,7 +124,8 @@
         "project": "@bob/registry-arch",
         "file": "packages/bob-registry/arch/src/architecture.ts",
         "variable": "registryArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -124,7 +136,8 @@
         "project": "@bob/manager-arch",
         "file": "packages/sub-bob-manager/arch/src/architecture.ts",
         "variable": "managerArch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -132,7 +145,8 @@
       "name": "@bob/sub-bob-bootstrap",
       "type": "client",
       "attributes": {
-        "project": "@bob/sub-bob-bootstrap"
+        "project": "@bob/sub-bob-bootstrap",
+        "role": "client"
       }
     },
     {
@@ -140,7 +154,8 @@
       "name": "@bob/frontend",
       "type": "frontend",
       "attributes": {
-        "project": "@bob/frontend"
+        "project": "@bob/frontend",
+        "role": "web"
       }
     }
   ],

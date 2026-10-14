@@ -4,7 +4,9 @@
       "uid": "system:example",
       "name": "example",
       "type": "system",
-      "attributes": {}
+      "attributes": {
+        "role": "boundary"
+      }
     },
     {
       "uid": "backend:hello-world",
@@ -14,7 +16,8 @@
         "project": "architecture",
         "file": "architecture/src/architecture.ts",
         "variable": "arch",
-        "kind": "architecture"
+        "kind": "architecture",
+        "role": "service"
       }
     },
     {
@@ -22,7 +25,20 @@
       "name": "cdk-arch-web",
       "type": "frontend",
       "attributes": {
-        "project": "cdk-arch-web"
+        "project": "cdk-arch-web",
+        "role": "web"
+      }
+    },
+    {
+      "uid": "person:user",
+      "name": "user",
+      "type": "person",
+      "attributes": {
+        "project": "cdk-arch-web",
+        "file": "web/src/architecture.ts",
+        "variable": "user",
+        "kind": "entity",
+        "role": "person"
       }
     }
   ],
@@ -41,6 +57,11 @@
       "start": "cdk-arch-web",
       "is": "uses",
       "end": "backend:hello-world"
+    },
+    {
+      "start": "person:user",
+      "is": "says hello",
+      "end": "cdk-arch-web"
     }
   ]
 }
